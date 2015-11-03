@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="dataSourceStorageLocal">
+    <data-source name="PostgreSQL - trips@localhost" uuid="8bab389c-8b79-4e8c-b778-81cffc4f5c80">
+      <secret-storage>master_key</secret-storage>
+      <user-name>david</user-name>
+      <schema-pattern>trips.pg_catalog trips.public</schema-pattern>
+      <default-schemas>trips.pg_catalog trips.public</default-schemas>
+    </data-source>
+  </component>
+</project>

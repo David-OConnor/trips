@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+
+     <!-- Setting a meta viewport allows Bootstrap to optimize for mobile devices.
+     setting the maximum-scale and user-scalable blocks scrolling on mobile devices.-->
+    <meta name="viewport" content="width=device-width, initial-scale=1,
+    maximum-scale=1, user-scalable=no">
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet"
+          href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"
+          media="screen">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+    <link href="/static/css/style.css" rel="stylesheet">
+
+</head>
+
+<body>
+    <div class="container">
+        <h2>This website is in beta. It may give innacurate results, or experience
+        unexpected downtime.</h2>
+        {% block body %}
+        {% endblock %}
+    </div>
+
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+
+</body>
+</html>
