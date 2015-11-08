@@ -2,7 +2,6 @@ from django.shortcuts import render
 from django.http import HttpResponseRedirect, HttpResponse
 
 from .forms import TripForm
-from . import trip_db
 from . import rec_code
 
 
@@ -21,10 +20,6 @@ def index(request):
 
             context = {'similar': similar}
             return render(request, 'results.html', context)
-
-            # book = trip_db.query(title, author)[0]
-            # return HttpResponse("Here's your book: {} by {}".format(
-            #     book.title, book.author))
 
     # if a GET (or any other method) we'll create a blank form
     else:

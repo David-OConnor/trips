@@ -12,3 +12,4 @@ workspace.xml
 
 # Project-specific
 recommend/private.py
+worldcities.csv

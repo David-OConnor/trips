@@ -7,76 +7,39 @@ class Region(models.Model):
     # todo possibly use subregions as well.
     name = models.CharField(max_length=30, unique=True)
 
+    def __str__(self):
+        return self.name
+
 
 class Country(models.Model):
     name = models.CharField(max_length=100, unique=True)
     region = models.ForeignKey(Region, related_name='countries')
+    # ISO 3166-1 alpha-2 and alpha-3 country codes
+    # todo consider removing alpha 3, and making alpha 2 the primary key.
+    alpha2 = models.CharField(max_length=2, unique=True)
+    alpha3 = models.CharField(max_length=3, primary_key=True)
+
+    def __str__(self):
+        return self.name
 
 
 class Place(models.Model):
-    city = models.CharField(max_length=50)
+    city = models.CharField(max_length=100)
     # country = models.CharField(max_length=50)
     country = models.ForeignKey(Country, related_name='places')
     lat = models.FloatField()
     lon = models.FloatField()
 
-    # def __str__(self):
-    #     return self.city
+    # US FIPS 5-2 1st level administrative division code (e.g., state/province)
+    division_code = models.CharField(max_length=2)
+
+    def __str__(self):
+        return ', '.join([self.city, self.country.name])
 
     class Meta:
-        unique_together = ('city', 'country')
-
-
-# class Vote(models.Model):
-#     """A Vote on a Product"""
-#     user = models.ForeignKey(User, related_name='votes')
-#     place = models.ForeignKey(Place)
-#     # site = models.ForeignKey(Site)
-#     # score = models.FloatField()
-#
-#     def __str__(self):
-#         return "Vote"
+        unique_together = ('city', 'country', 'division_code')
 
 
 class Submission(models.Model):
-    """An entry from one anonymous submission"""
+    """An entry from one anonymous submission of several liked places."""
     places = models.ManyToManyField(Place)
-
-
-# # class Similarity:
-# #     """Boilerplate for django-recommends"""
-# #     object = models.ForeignKey(Place)
-# #     related_object = models.ForeignKey(Place)
-# #     score = models.FloatField(default=0)
-#
-#     def __str__(self):
-#         return "Similiarity. Place 1: {}, Place 2: {}".format(self.object, self.related_object)
-#     #
-#     # class Meta:
-#     #     # todo this may allow duplicates of opposite order.  Investigate.
-#     #     unique_together = ('place1d', 'place2')
-#
-#
-# class Reccomendation:
-#     """Boilerplate for django-recommends"""
-#     object = models.ForeignKey(Place)
-#     user = None
-#     score = models.FloatField(default=0)
-
-
-
-
-# class Relationship(models.Model):
-#     """Defines a relationship between two books.  For example, if someone lists
-#     liking three books, a relatinship would be created for book1-2, 1-3, and 2-3.
-#     If any of these exist, their count would increase."""
-#     place1 = models.ForeignKey(Place)
-#     place2 = models.ForeignKey(Place)
-#     weight = models.IntegerField(default=0)
-#
-#     def __str__(self):
-#         return "Relationship. Place 1: {}, Place 2: {}".format(self.place1, self.placd2)
-#
-#     class Meta:
-#         # todo this may allow duplicates of opposite order.  Investigate.
-#         unique_together = ('place1d', 'place2')
