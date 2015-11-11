@@ -16,5 +16,6 @@ class TripForm(forms.Form):
         self.helper.form_class = 'form-horizontal'
         self.helper.add_input(Submit('submit', 'Submit', css_class='btn-primary'))
         self.helper.layout = Layout(
-            PrependedText('cities', '@', placeholder='Enter cities you like'),
+            PrependedText('cities', '<i class="fa fa-search"></i>',
+                          placeholder='Enter travel spots you\'ve enjoyed'),
         )

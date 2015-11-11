@@ -14,9 +14,8 @@ def index(request):
         if form.is_valid():
             cities = form.cleaned_data['cities']
 
-            similar = rec_code.find_similar_multiple(cities.split())
+            similar = rec_code.process_input(cities)
             similar = list(similar.items())
-            print(similar)
 
             context = {'similar': similar}
             return render(request, 'results.html', context)
