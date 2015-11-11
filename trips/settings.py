@@ -23,10 +23,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'gmtng+-cpb^e&fc#x_6bpgtp!awt#929sd583mqd7przjn!!0+'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+ON_HEROKU = True if 'DATABASE_URL' in os.environ else False
 
-ALLOWED_HOSTS = []
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = False if ON_HEROKU else True
+
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'travelspots.herokuapp.com']
 
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
