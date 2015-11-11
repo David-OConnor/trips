@@ -3,7 +3,7 @@ from difflib import SequenceMatcher
 from typing import List, Iterable, Tuple, Generator, Iterator
 
 import numpy as np
-from scipy.stats.stats import pearsonr
+# from scipy.stats.stats import pearsonr
 
 from .models import Place, Submission
 
@@ -66,7 +66,9 @@ def correlate(place_1: Place, place_2: Place, data: np.ndarray):
     place_1_reviews = p1r[p1r[:, 0].argsort()]
     place_2_reviews = p2r[p2r[:, 0].argsort()]
 
-    correlation_coefficient = pearsonr(place_1_reviews[:, 2], place_2_reviews[:, 2])[0]
+    # todo we could use scipy.stats.pearsonr, np.corrcoef, or brisk.corr
+    # correlation_coefficient = pearsonr(place_1_reviews[:, 2], place_2_reviews[:, 2])[0]
+    correlation_coefficient = np.corrcoef(place_1_reviews[:, 2], place_2_reviews[:, 2])[0, 1]
 
     # import brisk
     # correlation_coefficient = brisk.corr(place_1_reviews.score, place_2_reviews.score)
@@ -75,14 +77,18 @@ def correlate(place_1: Place, place_2: Place, data: np.ndarray):
     return correlation_coefficient
 
 
-def find_similar(place1: Place) -> OrderedDict:
+def find_similar(place: Place) -> OrderedDict:
     """"""
     data = find_reviews()
+
+    # Ignore this place if there are no existing submissions for it.
+    if place.id not in data[:, 1]:
+        return {}
 
     # todo use a filter for low, instead of no, review places.
     # Ignore places that have no reviewers.
     query = Place.objects.filter(id__in=data[:, 1])
-    scores = {place2: correlate(place1, place2, data) for place2 in query}
+    scores = {place2: correlate(place, place2, data) for place2 in query}
 
     return OrderedDict(sorted(scores.items(), key=lambda x: x[1], reverse=True))
 
