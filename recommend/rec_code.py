@@ -115,7 +115,7 @@ def find_similar_multiple(similars: Iterable[OrderedDict]):
 def find_db_entries(places: Iterable[str]) -> Iterator[Place]:
     """Accept place name strings, as passed from a web form; find their
     corresponding database entries."""
-    min_match_ratio = .8
+    min_match_ratio = .5
 
     # todo if matches are identical or similar (florence italy vs usa), use
     # todo number of submissions to pick the most popular.
@@ -123,8 +123,20 @@ def find_db_entries(places: Iterable[str]) -> Iterator[Place]:
     for place_name in places:
         ratios = []
         # Narrow the number of objects to filter with a startswith query.
-        for place in Place.objects.filter(city__istartswith=place_name[:2]):
-            ratios.append((place, SequenceMatcher(None, place_name, place.city).quick_ratio()))
+        for place in Place.objects.filter(city__istartswith=place_name[:3]):
+            # Allow entries that include the country name, to help narrow down
+            # the place.
+
+            # todo improve this logic.
+            # If there are no spaces in the name, no country was specified.
+            if ' ' not in place_name:
+                db_place_name = place.city
+            elif place.country.name == 'united states':
+                db_place_name = ' '.join([place.city, place.state])
+            else:
+                db_place_name = ' '.join([place.city, place.country.name])
+
+            ratios.append((place, SequenceMatcher(None, place_name, db_place_name).quick_ratio()))
 
         filtered = filter(lambda x: x[1] > min_match_ratio, ratios)
         matches = sorted(filtered, key=lambda x: x[1], reverse=True)
@@ -133,21 +145,24 @@ def find_db_entries(places: Iterable[str]) -> Iterator[Place]:
             continue
 
         # Find matches tied for the lead.
-        tops = [matches[0]]
-        for match in matches[1:]:
-            if match[1] == tops[0][1]:
-                tops.append(match)
+        top_match = matches[0]
+        tops = [m[0] for m in matches if m[1] == top_match[1]]
 
         # Find the most popular match of those tied for the lead.
         reviews = find_reviews()
-        counts = []
-        for place in (place_[0] for place_ in tops):
-            counts.append((place, (reviews[:, 1] == place.id).sum()))
+        counts = [(place, (reviews[:, 1] == place.id).sum()) for place in tops]
         most_popular = max(counts, key=lambda x: x[1])
-        yield most_popular[0]
 
-        # todo return only the top result for now.
-        # yield matches[0][0]
+        # # todo you could store population and do it that way instead.
+        # # if none of the top matches have been chosen before, eliminate ones
+        # # in the USA; copycats.
+        # if most_popular[1] == 0:
+        #     for place in tops:
+        #         if place.country.name != 'united states':
+        #             yield place
+        #             break
+        # else:
+        yield most_popular[0]
 
 
 def process_input(place_str: str):
@@ -157,8 +172,30 @@ def process_input(place_str: str):
     entries = find_db_entries(places)
     entries = list(entries)
     print("DB entries:", entries)
+    print("Adding entries as a new submission.")
+    submit_new(entries)
 
     similars = (find_similar(place) for place in entries)
 
-    return find_similar_multiple(similars)
+    similars = find_similar_multiple(similars)
 
+    # The top results will be the places submitted; remove them from the results.
+    similars2 = {}
+    for place, correlation in similars.items():
+        if place not in entries:
+            similars2[place] = correlation
+
+    # todo you're calling OrderedDict 3 times, when you only need to once.
+    similars = OrderedDict(sorted(similars2.items(), key=lambda x: x[1], reverse=True))
+
+    return similars, entries
+
+
+def submit_new(places: Iterable[Place]):
+    """Creates a new submission of places someone likes.  Possibly called
+    each time someone submits a form, or more for users with registered accounts."""
+    submission = Submission()
+    submission.save()
+    for place in places:
+        submission.places.add(place)
+    submission.save()

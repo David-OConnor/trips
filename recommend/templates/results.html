@@ -4,6 +4,13 @@
 
     <div class="row">
         <div class="col-md-8 col-md-offset-2 col-xs-12">
+            <h2>Based on your choices of
+                {% for entry in  entries %}
+                    {{ entry }};
+                {% endfor %}
+
+
+            </h2>
             <h2>Here are your recommendations:</h2>
 
             <table class="table">

@@ -14,10 +14,12 @@ def index(request):
         if form.is_valid():
             cities = form.cleaned_data['cities']
 
-            similar = rec_code.process_input(cities)
+            # Similar contains the recommendations; entries contains the original
+            # submissions.
+            similar, entries = rec_code.process_input(cities)
             similar = list(similar.items())
 
-            context = {'similar': similar}
+            context = {'similar': similar, 'entries': entries}
             return render(request, 'results.html', context)
 
     # if a GET (or any other method) we'll create a blank form

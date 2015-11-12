@@ -75,6 +75,7 @@ def populate_places() -> None:
             continue
 
 
+# get_place is currently unused.
 def get_place(place_name: str):
     url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json'
 

@@ -8,7 +8,7 @@ from crispy_forms.bootstrap import (
 
 class TripForm(forms.Form):
     # temporary test form
-    cities = forms.CharField(label="City 1", max_length=50)
+    cities = forms.CharField(label="City 1", max_length=500)
 
     def __init__(self, *args, **kwargs):
         super(TripForm, self).__init__(*args, **kwargs)
