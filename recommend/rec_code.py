@@ -93,7 +93,7 @@ def find_similar(place: Place) -> OrderedDict:
     return OrderedDict(sorted(scores.items(), key=lambda x: x[1], reverse=True))
 
 
-def find_similar_multiple(similars: Iterable[OrderedDict]):
+def find_similar_multiple(similars: Iterable[OrderedDict]) -> OrderedDict:
     """Organizes data from individual similarity rankings for each place."""
     composite_scores = {}
     for similar in similars:
@@ -166,34 +166,54 @@ def find_db_entries(places: Iterable[str]) -> Iterator[Place]:
 
 
 def process_input(place_str: str):
-    """Find recommendations based on input places."""
+    """Find recommendations based on input places. This function handles the
+    overall processing, includes tweaks for web page display."""
     places = (place.strip() for place in place_str.split(','))
 
     entries = find_db_entries(places)
     entries = list(entries)
     print("DB entries:", entries)
-    print("Adding entries as a new submission.")
+
     submit_new(entries)
 
     similars = (find_similar(place) for place in entries)
 
     similars = find_similar_multiple(similars)
 
+    similars = trim_output(similars, entries)
+
+    # todo consider a separate function for trimming the data.
+
+
+    return similars, entries
+
+
+def trim_output(similars, entries):
+    """Removes computed recommendation results that are unsuitable for output."""
     # The top results will be the places submitted; remove them from the results.
+
+    # Recommendations below this correlation value won't display.
+    correlation_thresh = 0
+
     similars2 = {}
     for place, correlation in similars.items():
-        if place not in entries:
+        if place not in entries and correlation > correlation_thresh:
             similars2[place] = correlation
 
     # todo you're calling OrderedDict 3 times, when you only need to once.
-    similars = OrderedDict(sorted(similars2.items(), key=lambda x: x[1], reverse=True))
-
-    return similars, entries
+    return OrderedDict(sorted(similars2.items(), key=lambda x: x[1], reverse=True))
 
 
 def submit_new(places: Iterable[Place]):
     """Creates a new submission of places someone likes.  Possibly called
     each time someone submits a form, or more for users with registered accounts."""
+    places = list(places)
+
+    # Submissions must include two places to correlate.
+    if len(places) == 1:
+        return
+
+    print("Adding entries as a new submission.")
     submission = Submission()
     submission.save()
     for place in places:

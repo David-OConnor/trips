@@ -18,6 +18,8 @@ class Country(models.Model):
     # todo consider removing alpha 3, and making alpha 2 the primary key.
     alpha2 = models.CharField(max_length=2, unique=True)
     alpha3 = models.CharField(max_length=3, primary_key=True)
+    # JSON string, ie '['england', 'britain']'
+    alternate_names = models.TextField()
 
     def __str__(self):
         return self.name

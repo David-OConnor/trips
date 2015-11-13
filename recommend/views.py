@@ -18,6 +18,8 @@ def index(request):
             # submissions.
             similar, entries = rec_code.process_input(cities)
             similar = list(similar.items())
+            if not similar:
+                return render(request, 'no_results.html', {'entries': entries})
 
             context = {'similar': similar, 'entries': entries}
             return render(request, 'results.html', context)
