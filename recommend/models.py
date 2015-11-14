@@ -46,13 +46,10 @@ class Country(models.Model):
     # JSON string, ie '['england', 'britain']'
     alternate_names = models.TextField(null=True)
     subregion = models.ForeignKey(Subregion, null=True, related_name='countries')
-    tags = models.ForeignKey(CountryTag, null=True, related_name='countries')
+    tags = models.ManyToManyField(CountryTag, null=True, related_name='countries')
 
     def __str__(self):
         return self.name
-
-
-
 
 
 class Place(models.Model):

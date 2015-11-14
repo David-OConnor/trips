@@ -1,15 +1,21 @@
-from collections import OrderedDict
+from collections import defaultdict, OrderedDict
 from difflib import SequenceMatcher
 import json
+from itertools import chain
 from typing import List, Iterable, Tuple, Generator, Iterator
 
 import numpy as np
 # from scipy.stats.stats import pearsonr
 
+from django.db.models import Q
+
 from .models import Place, Submission
 
 
 # todo scikit cosine similarity
+
+def sort_by_key(data: dict):
+    return OrderedDict(sorted(data.items(), key=lambda x: x[1], reverse=True))
 
 
 class Review:
@@ -78,10 +84,8 @@ def correlate(place_1: Place, place_2: Place, data: np.ndarray):
     return correlation_coefficient
 
 
-def find_similar(place: Place) -> OrderedDict:
-    """"""
-    data = find_reviews()
-
+def find_similar(place: Place, data: np.ndarray) -> OrderedDict:
+    """Find similar places based on user submissions."""
     # Ignore this place if there are no existing submissions for it.
     if place.id not in data[:, 1]:
         return {}
@@ -89,9 +93,39 @@ def find_similar(place: Place) -> OrderedDict:
     # todo use a filter for low, instead of no, review places.
     # Ignore places that have no reviewers.
     query = Place.objects.filter(id__in=data[:, 1])
-    scores = {place2: correlate(place, place2, data) for place2 in query}
+    scores = {place2: correlate(place, place2, data) for place2 in query if place != place2}
 
-    return OrderedDict(sorted(scores.items(), key=lambda x: x[1], reverse=True))
+    return sort_by_key(scores)
+
+
+def find_similar_tagged(place: Place) -> OrderedDict:
+    """This function is like find_similar, but uses tags and subregions to
+    find related places rather than user-submitted data."""
+
+    # Ignore places that have no tags, and are not in tagged countries
+    places = Place.objects.exclude(Q(tags__isnull=True), Q(country__tags__isnull=True))
+    # places = Place.objects.exclude(tags__isnull=True)
+
+    # Include tags for the place's country.
+    tags = list(chain(place.tags.all(), place.country.tags.all()))
+
+    place_tag_data = {}  # todo defaultdict?
+    for place2 in places:
+        if place == place2:
+            continue
+
+        place_tag_data[place2] = 0
+
+        tags2 = chain(place2.tags.all(), place2.country.tags.all())
+        for tag in tags2:
+            if tag in tags:
+                place_tag_data[place2] += 1
+
+    place_tag_data = {k: v for k, v in place_tag_data.items() if v > 0}
+    place_tag_results = sort_by_key(place_tag_data)
+
+    return place_tag_results
+
 
 
 def find_similar_multiple(similars: Iterable[OrderedDict]) -> OrderedDict:
@@ -110,7 +144,7 @@ def find_similar_multiple(similars: Iterable[OrderedDict]) -> OrderedDict:
         import numpy as np
         result[city] = np.mean(scores)
 
-    return OrderedDict(sorted(result.items(), key=lambda x: x[1], reverse=True))
+    return sort_by_key(result)
 
 
 def ratio_helper(place: Place, place_name, country_names) -> Iterator[Tuple[Place, float]]:
@@ -198,14 +232,13 @@ def process_input(place_str: str):
 
     submit_new(entries)
 
-    similars = (find_similar(place) for place in entries)
+    data = find_reviews()
+    similars = (find_similar(place, data) for place in entries)
 
     similars = find_similar_multiple(similars)
-
     similars = trim_output(similars, entries)
 
     # todo consider a separate function for trimming the data.
-
 
     return similars, entries
 
@@ -219,11 +252,13 @@ def trim_output(similars, entries):
 
     similars2 = {}
     for place, correlation in similars.items():
-        if place not in entries and correlation > correlation_thresh:
+         # todo this line shoudl be uncessary based on checks upstream.
+        # if place not in entries and correlation > correlation_thresh:
+        if correlation > correlation_thresh:
             similars2[place] = correlation
 
     # todo you're calling OrderedDict 3 times, when you only need to once.
-    return OrderedDict(sorted(similars2.items(), key=lambda x: x[1], reverse=True))
+    return sort_by_key(similars2)
 
 
 def submit_new(places: Iterable[Place]):

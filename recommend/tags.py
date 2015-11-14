@@ -1,38 +1,62 @@
 # This file contains python code represeting tags, including code to add database entries.
+from collections import namedtuple
+
+# usa is a bool. If True, country_state is a state; else a country.
+TagKey = namedtuple('TagKey', ['city', 'country_state', 'usa'])
+
 
 from django.db.models import Q
 
-from .models import Place, Tag, Country, Subregion
+from .models import Place, Tag, Country, CountryTag
+
 
 place_tags = {
-    ('cambridge', 'united kingdom'): ['university', 'historic'],
-    ('miami', 'florida'): ['beach'],
-    ('florence', 'italy'): ['art', 'historic'],
-    ('london', 'england'): ['commercial', 'capital', 'major', 'culture'],
-    ('washington', 'district of columbia'): ['capital', 'major'],
-    ('paris', 'france'): ['capital', 'major', 'art', 'culture', 'food'],
-    ('chania', 'greece'): ['beach'],
-    ('dubai', 'united arab emirates'): ['commerce'],
-    ('pisa', 'italy'):  ['art', 'mediterranean'],
-    ('rome', 'italy'):  ['art', 'mediterranean', 'ancient', 'historeic'],
-    ('copenhagen', 'denmark'):  [],
-    ('helsinki', 'finland'): [],
-    ('new york', 'new york'): ['commerce', 'major', 'art', 'dense', 'food'],
-    ('new delhi', 'india'): ['culture', 'capital', 'major'],
-    ('kraków', 'poland'): [],
-    ('warsaw', 'poland'): ['capital'],
-    ('marrakech', 'morocco'): [],
-    ('siem reap', 'cambodia'): ['historic', 'ancient', 'genocide'],
-    ('istanbul', 'turkey'): ['capital'],
-    ('hanoi', 'vietnam'): ['historic'],
-    ('prague', 'czech republic'): ['capital'],
-    ('cape town', 'south africa'): ['beach'],
-    ('zermatt', 'switzerland'): [],
-    ('barcelona', 'spain'): ['mediterranean', 'culture', 'food'],
-    ('goreme', 'turkey'): ['historic', 'ancient'],
-    ('ubud', 'indonesia'): [],
-    ('cusco', 'peru'): ['historic', 'ancient', 'mountains'],
-    ('saint petersburg', 'russia'): ['historic', 'culture'],
+    TagKey('cambridge', 'united kingdom', False): ['university', 'historic'],
+    TagKey('florence', 'italy', False): ['art', 'historic', 'culture'],
+    TagKey('london', 'united kingdom', False): ['commercial', 'capital', 'major', 'culture'],
+    TagKey('washington', 'district of columbia', True): ['capital', 'major'],
+    TagKey('philadelphia', 'pennsylvania', True): ['historic'],
+    TagKey('houston', 'texas', True): ['southern us'],
+    TagKey('austin', 'texas', True): ['southern us'],
+    TagKey('atlanta', 'georgia', True): ['southern us'],
+    TagKey('miami', 'florida', True): ['beach'],
+    TagKey('new york', 'new york', True): ['commerce', 'major', 'art',
+                                            'dense', 'food', 'coastal'],
+    TagKey('salt lake city', 'utah', True): ['western us', 'nature'],
+    TagKey('paris', 'france', False): ['capital', 'major', 'art', 'culture', 'food'],
+    TagKey('chaniá', 'greece', False): ['beach', 'coastal', 'crete'],
+    TagKey('réthymno', 'greece', False): ['beach', 'coastal', 'crete'],
+    TagKey('athens', 'greece', False): ['beach', 'coastal', 'historic', 'culture', 'art'],
+    TagKey('dubai', 'united arab emirates', False): ['commerce'],
+    TagKey('pisa', 'italy', False):  ['art', 'mediterranean'],
+    TagKey('rome', 'italy', False):  ['art', 'mediterranean', 'ancient', 'historic'],
+    TagKey('copenhagen', 'denmark', False):  [],
+    TagKey('helsinki', 'finland', False): [],
+    TagKey('new delhi', 'india', False): ['culture', 'capital', 'major'],
+    TagKey('kraków', 'poland', False): [],
+    TagKey('warsaw', 'poland', False): ['capital'],
+    TagKey('marrakech', 'morocco', False): [],
+    TagKey('siem reap', 'cambodia', False): ['historic', 'ancient', 'genocide'],
+    TagKey('istanbul', 'turkey', False): ['capital'],
+    # Cant' find any cities in vietnam
+    # TagKey('hanoi', 'vietnam', False): ['historic'],
+    TagKey('prague', 'czech republic', False): ['capital'],
+    TagKey('cape town', 'south africa', False): ['beach'],
+    # Cant' find zermatt
+    # TagKey('zermatt', 'switzerland', False): [],
+    TagKey('barcelona', 'spain', False): ['mediterranean', 'culture', 'food'],
+    # Can't find goreme in db
+    # TagKey('goreme', 'turkey', False): ['historic', 'ancient'],
+    TagKey('ubud', 'indonesia', False): [],
+    TagKey('cusco', 'peru', False): ['historic', 'ancient', 'mountains'],
+    TagKey('saint petersburg', 'russia', False): ['historic', 'culture'],
+    # TagKey('', '', False): [],
+    # TagKey('', '', False): [],
+    # TagKey('', '', False): [],
+    # TagKey('', '', False): [],
+    # TagKey('', '', False): [],
+    # TagKey('', '', False): [],
+    # TagKey('', '', False): [],
 
 }
 
@@ -47,64 +71,48 @@ country_tags = {
     'india': ['subcontinent'],
     'bangladesh': ['subcontinent'],
     'pakistan': ['subcontinent'],
-
 }
 
 
-def find_db_entry(place_name: str, country_name: str) -> Place:
+def find_db_entry(place: TagKey) -> Place:
     """Accept place name strings, as passed from a web form; find their
     corresponding database entries."""
-    min_match_ratio = .5
 
-    # todo this func needs polish
-    ratios = []
+    if place.usa:
+        result = Place.objects.filter(city=place.city).filter(country__name='united states')
+        for place2 in result:
+            if place2.state == place.country_state:
+                result = place2
+                break
+        if not result:
+            raise AttributeError("UHOH, no result on {}".format(place))
+        return result
 
-    # todo us state
-    db_place = Place.objects.get(Q(city=place_name), Q(country__name=country_name))
-    return db_place
-    #
-    # # Q
-    #
-    # # Narrow the number of objects to filter with a startswith query.
-    # for place in Place.objects.filter(city__istartswith=place_name[:3]):
-    #     # Allow entries that include the country name, to help narrow down
-    #     # the place.
-    #
-    #     if place.country.name == 'united states':
-    #         db_place_name = ' '.join([place.city, place.state])
-    #     else:
-    #         db_place_name = ' '.join([place.city, place.country.name])
-    #
-    #     ratios.append((place, SequenceMatcher(
-    #         None, place_name, db_place_name).quick_ratio()))
-    #
-    # filtered = filter(lambda x: x[1] > min_match_ratio, ratios)
-    # matches = sorted(filtered, key=lambda x: x[1], reverse=True)
-    #
-    # # Find matches tied for the lead.
-    # top_match = matches[0]
+    # Multiple paris entries; use filter...[0] instead of get fo rnow.
+    # return Place.objects.get(Q(city=place.city), Q(country__name=place.country_state))
+    return Place.objects.filter(Q(city=place.city), Q(country__name=place.country_state))[0]
+
 
 
 def make_tags():
     """Populate the database with tags based on a dict.  Create the tag entries
     if needed, and associate them with places."""
-    for place_name, tag_names in place_tags.items():
-        place = find_db_entry(*place_name)
+    for tag_key, tag_names in place_tags.items():
+        print(tag_key.city, tag_key.country_state)
+        place = find_db_entry(tag_key)
 
-        tags_db = []
         for tag_name in tag_names:
             # If this tag doesn't exist, create it.
             tag, created = Tag.objects.get_or_create(name=tag_name)
-            tags_db.append(tag)
-
-        place.tags.add(tags_db)
+            place.tags.add(tag)
         place.save()
 
 
-def make_subregions():
+def make_country_tags():
     """Populate the subregion field of models.Country entries."""
-    for country_name, subregion_name in subregions.items():
-        country = Country.get(name=country_name)
-        subregion, created = Subregion.objects.get_or_create(name=subregion_name)
-        country.subregion = subregion
+    for country_name, tag_names in country_tags.items():
+        country = Country.objects.get(name=country_name)
+        for tag_name in tag_names:
+            tag, created = CountryTag.objects.get_or_create(name=tag_name)
+            country.tags.add(tag)
         country.save()
