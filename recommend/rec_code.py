@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from difflib import SequenceMatcher
+import json
 from typing import List, Iterable, Tuple, Generator, Iterator
 
 import numpy as np
@@ -112,7 +113,13 @@ def find_similar_multiple(similars: Iterable[OrderedDict]) -> OrderedDict:
     return OrderedDict(sorted(result.items(), key=lambda x: x[1], reverse=True))
 
 
-def find_db_entries(places: Iterable[str]) -> Iterator[Place]:
+def ratio_helper(place: Place, place_name, country_names) -> Iterator[Tuple[Place, float]]:
+    for name in country_names:
+        db_place_name = ' '.join([place.city, name])
+        yield place, SequenceMatcher(None, name, db_place_name).quick_ratio()
+
+
+def find_db_entries(place_names: Iterable[str]) -> Iterator[Place]:
     """Accept place name strings, as passed from a web form; find their
     corresponding database entries."""
     min_match_ratio = .5
@@ -120,23 +127,38 @@ def find_db_entries(places: Iterable[str]) -> Iterator[Place]:
     # todo if matches are identical or similar (florence italy vs usa), use
     # todo number of submissions to pick the most popular.
 
-    for place_name in places:
+    for place_name in place_names:
         ratios = []
         # Narrow the number of objects to filter with a startswith query.
         for place in Place.objects.filter(city__istartswith=place_name[:3]):
             # Allow entries that include the country name, to help narrow down
             # the place.
 
-            # todo improve this logic.
-            # If there are no spaces in the name, no country was specified.
-            if ' ' not in place_name:
-                db_place_name = place.city
-            elif place.country.name == 'united states':
-                db_place_name = ' '.join([place.city, place.state])
-            else:
-                db_place_name = ' '.join([place.city, place.country.name])
+            # todo clean up this if/else and use DRY if possible.
+            if place.country.alternate_names:
+                alternate_country_names = json.loads(place.country.alternate_names)
 
-            ratios.append((place, SequenceMatcher(None, place_name, db_place_name).quick_ratio()))
+                alt_ratios = []
+                for alt_name in alternate_country_names:
+                    db_place_name = ' '.join([place.city, alt_name])
+                    alt_ratios.append((place, SequenceMatcher(None, place_name, db_place_name).quick_ratio()))
+
+                alt_matches = sorted(alt_ratios, key=lambda x: x[1], reverse=True)
+                ratios.append(alt_matches[0])
+            else:
+
+                # todo improve this logic.
+                # If there are no spaces in the name, no country was specified.
+                if ' ' not in place_name:
+                    db_place_name = place.city
+                elif place.country.name == 'united states':
+                    db_place_name = ' '.join([place.city, place.state])
+                else:
+                    db_place_name = ' '.join([place.city, place.country.name])
+
+
+                ratios.append((place, SequenceMatcher(
+                    None, place_name, db_place_name).quick_ratio()))
 
         filtered = filter(lambda x: x[1] > min_match_ratio, ratios)
         matches = sorted(filtered, key=lambda x: x[1], reverse=True)

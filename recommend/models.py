@@ -2,10 +2,35 @@ from django.contrib.auth.models import User
 from django.db import models
 
 
-# regions are places like 'africa', 'middle_east', 'western_europe' etc
+# regions are places like 'africa', 'europe' etc
 class Region(models.Model):
     # todo possibly use subregions as well.
     name = models.CharField(max_length=30, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+# regions are places like 'africa', 'middle_east', 'western_europe' etc
+class Subregion(models.Model):
+    # todo possibly use subregions as well.
+    name = models.CharField(max_length=30, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Tag(models.Model):
+    """For tagging places, ie 'beach', 'historic', 'business'"""
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class CountryTag(models.Model):
+    """For tagging countries, ie 'nordic', 'subcontinent'"""
+    name = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.name
@@ -19,10 +44,15 @@ class Country(models.Model):
     alpha2 = models.CharField(max_length=2, unique=True)
     alpha3 = models.CharField(max_length=3, primary_key=True)
     # JSON string, ie '['england', 'britain']'
-    alternate_names = models.TextField()
+    alternate_names = models.TextField(null=True)
+    subregion = models.ForeignKey(Subregion, null=True, related_name='countries')
+    tags = models.ForeignKey(CountryTag, null=True, related_name='countries')
 
     def __str__(self):
         return self.name
+
+
+
 
 
 class Place(models.Model):
@@ -36,6 +66,7 @@ class Place(models.Model):
 
     # US FIPS 5-2 1st level administrative division code (e.g., state/province)
     division_code = models.CharField(max_length=2)
+    tags = models.ManyToManyField(Tag)
 
     @property
     def state(self):
@@ -71,9 +102,9 @@ fips_5_2_codes = {
     'colorado': 8,
     'connecticut': 9,
     'delaware': 10,
-    'district of Columbia': 11,
+    'district of columbia': 11,
     'florida': 12,
-    'federated States of Micronesia': 64,
+    'federated States of micronesia': 64,
     'georgia':	13,
     'guam':	66,
     'guam2': 14,

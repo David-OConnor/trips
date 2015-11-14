@@ -5,7 +5,7 @@ import requests
 from django.db import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 
-from .models import Country, Region, Place
+from .models import Country, Region, Subregion, Place
 from .private import mashape_key, goog_places_key
 
 
@@ -94,20 +94,24 @@ def get_place(place_name: str):
 
 def populate_countries() -> None:
     """Populates the countries table."""
-    countries = get_all_countries()
+    countries_api = get_all_countries()
 
-    for country_api in countries:
+    for country_api in countries_api:
         region_name = country_api['region'].lower()
-        region_new = Region(name=region_name)
-        try:
-            region_new.save()
-        # Region already exists.
-        except IntegrityError:
-            pass
+        subregion_name = country_api['subregion'].lower()
 
-        region = Region.objects.get(name=region_name)
+        region, created = Region.objects.get_or_create(name=region_name)
+
+        # Some countries have a blank subregion; leave this as null rather than
+        # setting as an empty string.  This is often for island nations.
+        if subregion_name != '':
+            subregion, created = Subregion.objects.get_or_create(name=subregion_name)
+        else:
+            subregion = None
+
         country = Country(name=country_api['name'].lower(),
                           region=region,
+                          subregion=subregion,
                           alpha2=country_api['alpha2Code'].lower(),
                           alpha3=country_api['alpha3Code'].lower(),
                           )
