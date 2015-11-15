@@ -127,6 +127,15 @@ def find_similar_tagged(place: Place) -> OrderedDict:
     return place_tag_results
 
 
+def modulate_tagged(tag_results: OrderedDict) ->  OrderedDict:
+    """Convert counts to a portion that can be compared with submission-based
+    correlations."""
+    # Input dict values are the number of common tags.
+    multiplier = .05
+    result = {k: v * multiplier for k, v in tag_results.items()}
+    return sort_by_key(result)
+
+
 
 def find_similar_multiple(similars: Iterable[OrderedDict]) -> OrderedDict:
     """Organizes data from individual similarity rankings for each place."""
@@ -232,8 +241,37 @@ def process_input(place_str: str):
 
     submit_new(entries)
 
-    data = find_reviews()
-    similars = (find_similar(place, data) for place in entries)
+    review_data = find_reviews()
+
+    # Combine scores for reviews and tags
+    similars = []
+    for place in entries:
+        similar = find_similar(place, review_data)
+        similar_tag = find_similar_tagged(place)
+        similar_tag =  modulate_tagged(similar_tag)
+
+        similar_combined = defaultdict(int)
+        for place, review_score in similar.items():
+            similar_combined[place] += review_score
+        for place, review_score in similar_tag.items():
+            similar_combined[place] += review_score
+
+        similars.append(similar_combined)
+
+
+
+
+
+    # # Combine scores for reviews and tags
+    # similars = []
+    # for place in entries:
+    #     similar = find_similar(place, review_data)
+    #     similar_tag = find_similar_tagged(place)
+    #
+    #     similar_combined = {}
+    #     for place, review_score in similar.items():
+    #         similar_combined[place] = review_score + similar_tag[place]
+    #     similars.append(similar_combined)
 
     similars = find_similar_multiple(similars)
     similars = trim_output(similars, entries)
