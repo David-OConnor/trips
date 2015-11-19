@@ -4,18 +4,20 @@
 
     <div class="row">
         <div class="col-md-8 col-md-offset-2 col-xs-12">
-            <h2>Based on your choices of
+            <h2>Based on your choices of:
+                <ul>
                 {% for entry in  entries %}
-                    {{ entry }};
+                    <li>{{ entry }}</li>
                 {% endfor %}
+                </ul>
             </h2>
-            <h2>Here are your recommendations:</h2>
+            <h2>here are your recommendations:</h2>
 
             <table class="table">
                 {% for city in similar %}
                 <tr>
                     <td>{{ city.0 }}</td>
-                    <td>{{ city.1 }}</td>
+{#                    <td>{{ city.1 }}</td>#}
                 </tr>
                 {% endfor %}
             </table>

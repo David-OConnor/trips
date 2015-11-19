@@ -95,7 +95,7 @@ def find_similar(place: Place, data: np.ndarray) -> OrderedDict:
     query = Place.objects.filter(id__in=data[:, 1])
     scores = {place2: correlate(place, place2, data) for place2 in query if place != place2}
 
-    return sort_by_key(scores)
+    return scores  # todo removed sort in this func.
 
 
 def find_similar_tagged(place: Place) -> OrderedDict:
@@ -107,7 +107,9 @@ def find_similar_tagged(place: Place) -> OrderedDict:
     # places = Place.objects.exclude(tags__isnull=True)
 
     # Include tags for the place's country.
-    tags = list(chain(place.tags.all(), place.country.tags.all()))
+    # todo Note: subregions won't work properly unless more/all places are included
+    # todo in the place search above, which excludes non-tagged ones.
+    tags = list(chain(place.tags.all(), place.country.tags.all(), [place.country.subregion]))
 
     place_tag_data = {}  # todo defaultdict?
     for place2 in places:
@@ -116,15 +118,18 @@ def find_similar_tagged(place: Place) -> OrderedDict:
 
         place_tag_data[place2] = 0
 
-        tags2 = chain(place2.tags.all(), place2.country.tags.all())
+        tags2 = chain(place2.tags.all(), place2.country.tags.all(), [place2.country.subregion])
         for tag in tags2:
             if tag in tags:
                 place_tag_data[place2] += 1
 
     place_tag_data = {k: v for k, v in place_tag_data.items() if v > 0}
-    place_tag_results = sort_by_key(place_tag_data)
+    return place_tag_data
 
-    return place_tag_results
+    # todo removed sort  here.
+    # place_tag_results = sort_by_key(place_tag_data)
+
+    # return place_tag_results
 
 
 def modulate_tagged(tag_results: OrderedDict) ->  OrderedDict:
@@ -133,7 +138,8 @@ def modulate_tagged(tag_results: OrderedDict) ->  OrderedDict:
     # Input dict values are the number of common tags.
     multiplier = .05
     result = {k: v * multiplier for k, v in tag_results.items()}
-    return sort_by_key(result)
+    return result  # todo removed sort in this func.
+    # return sort_by_key(result)
 
 
 
@@ -152,8 +158,9 @@ def find_similar_multiple(similars: Iterable[OrderedDict]) -> OrderedDict:
         # todo find a better function than mean
         import numpy as np
         result[city] = np.mean(scores)
-
-    return sort_by_key(result)
+    return result
+    # todo removed sort in this func.
+    # return sort_by_key(result)
 
 
 def ratio_helper(place: Place, place_name, country_names) -> Iterator[Tuple[Place, float]]:
@@ -248,7 +255,7 @@ def process_input(place_str: str):
     for place in entries:
         similar = find_similar(place, review_data)
         similar_tag = find_similar_tagged(place)
-        similar_tag =  modulate_tagged(similar_tag)
+        similar_tag = modulate_tagged(similar_tag)
 
         similar_combined = defaultdict(int)
         for place, review_score in similar.items():
@@ -257,9 +264,6 @@ def process_input(place_str: str):
             similar_combined[place] += review_score
 
         similars.append(similar_combined)
-
-
-
 
 
     # # Combine scores for reviews and tags
@@ -290,9 +294,10 @@ def trim_output(similars, entries):
 
     similars2 = {}
     for place, correlation in similars.items():
-         # todo this line shoudl be uncessary based on checks upstream.
-        # if place not in entries and correlation > correlation_thresh:
-        if correlation > correlation_thresh:
+         # todo this line shoudl be uncessary based on checks upstream. Not working
+         # todo upstream atm.
+        if place not in entries and correlation > correlation_thresh:
+        # if correlation > correlation_thresh:
             similars2[place] = correlation
 
     # todo you're calling OrderedDict 3 times, when you only need to once.

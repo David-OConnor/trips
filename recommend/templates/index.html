@@ -5,31 +5,15 @@
 {% block body %}
     <div class="row">
         <div class="col-md-8 col-md-offset-2 col-xs-12">
-
-
-            <h2>Trip Recommendations</h2>
-            <h3>Enter travel spots you've enjoyed</h3>
-
+            <h3>What travel spots have you enjoyed?</h3>
             {% crispy form %}
-{##}
-{##}
-{#            <form action="/" method="post">#}
-{#                {% csrf_token %}#}
-{#                {{ form }}#}
-{#                <input type="submit" value="Submit" />#}
-{#            </form>#}
 
-
-
-
-{#            <h3>Enter at least two books you like</h3>#}
-{#            <div class="form-group">#}
-{#                <div class="input-group">#}
-{#                    <span class="input-group-addon" id="test1"><i class="fa fa-book"></i></span>#}
-{#                    <input type="text" class="form-control" placeholder="Enter a book title" aria-describedby="test1">#}
-{#                </div>#}
-
-{#            </div>#}
+            <div id="about">
+                <h3>About</h3>
+                <p>This site recommends cities and towns to travel to based on
+                what people similar to you like. Recommendations improve
+                as more people use the site. It's brand new, and rapidly improving.</p>
+            </div>
         </div>
     </div>
 
