@@ -1,4 +1,5 @@
 import csv
+import json
 from typing import List, Iterator
 
 import requests
@@ -140,3 +141,22 @@ def remove_duplicates() -> None:
                     place_names.append(place.city)
                 except UnicodeEncodeError:
                     continue
+
+
+def add_alternates() -> None:
+    """Replace a country's alternate names with a dict within this file."""
+    for country_name, alternates in alternate_names.items():
+        country = Country.objects.get(name=country_name)
+        country.alternate_names = json.dumps(alternates)
+        country.save()
+
+
+alternate_names = {
+    'united kingdom': ['uk', 'england', 'britain', 'great britain'],
+    'netherlands': ['the netherlands', 'holland'],
+    'united states': ['usa', 'us', 'the united states', 'america'],
+    'republic of ireland': ['ireland'],
+    'republic of kosovo': ['kosovo'],
+    'republic of macedonia': ['macedonia'],
+    'democratic republic of the congo': ['congo'],
+}

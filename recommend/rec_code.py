@@ -12,6 +12,61 @@ from django.db.models import Q
 from .models import Place, Country, Submission
 
 
+# default_places avoids minor cities being defaulted to instead of more notable ones;
+# ie london, alabama instead of london, united kingdom. Could be databse entries instead.
+default_places = {
+    'london': 'united kingdom',
+    'cambridge': 'united kingdom',
+    'paris': 'france',
+    'florence': 'italy',
+    'pisa': 'italy',
+    'brussels': 'belgium',
+    'berlin': 'germany',
+    'tokyo': 'japan',
+    'delhi': 'india',
+    'mexico city': 'mexico',
+    'beijing': 'china',
+    'cairo': 'egypt',
+    'calcutta': 'india',
+    'istanbul': 'turkey',
+    'lagos': 'nigeria',
+    'shanghai': 'china',
+    'karachi': 'pakistan',
+    'mumbai': 'india',
+    'moscow': 'russia',
+    'jakarta': 'indonesia',
+    'lima': 'peru',
+    'bengaluru': 'india',
+    'bangkok': 'thailand',
+    'tehran': 'iran',
+    'baghdad': 'iraq',
+    'dhaka': 'bangladesh',
+    'ho chi minh city': 'vietnam',
+    'hanoi': 'vietnam',
+    'santiago': 'chile',
+    'chennai': 'india',
+    'abidjan': 'ivory coast',
+    'durban': 'south africa',
+    'nairobi': 'kenya',
+    'buenos aires': 'argentina',
+    'copenhagen': 'denmark',
+    'nice': 'france',
+    'toulouse': 'france',
+    'antwerp': 'belgium',
+    'amsterdam': 'netherlands',
+    'cardiff': 'united kingdom',
+    'the hague': 'netherlands',
+    'bristol': 'united kingdom',
+    'kazan': 'russia',
+    'rotterdam': 'netherlands',
+    'seville': 'spain',
+    'newcastle': 'united kingdom',
+    'warsaw': 'poland',
+    'vienna': 'austria',
+    'valencia': 'spain',
+}
+
+
 # todo scikit cosine similarity
 
 def sort_by_key(data: dict):
@@ -105,7 +160,6 @@ def find_similar_tagged(place: Place) -> OrderedDict:
     # use a set, since some tags may be duplicated between place and country.
     tags = set(chain(place.tags.all(), place.country.tags.all()))
     tag_ids = [tag.id for tag in tags]
-    print("tags", tags)
 
     # Note: Places with no matching tags are filtered out, for speed.
     # If there's at least one matching place tag, that places country tags and
@@ -187,13 +241,18 @@ def find_db_entry(place_name: str) -> Place:
 
             # todo improve this logic.
             # If there are no spaces in the name, no country was specified.
+            # todo make place_names work for us cities too.
+            if place_name in default_places and default_places[place_name] != 'united states':
+                # This requires no duplicates exist; else an exception is raised.
+                return Place.objects.get(Q(city=place_name),
+                                         Q(country__name=default_places[place_name]))
+
             if ' ' not in place_name:
                 db_place_name = place.city
             elif place.country.name == 'united states':
                 db_place_name = ' '.join([place.city, place.state])
             else:
                 db_place_name = ' '.join([place.city, place.country.name])
-
 
             ratios.append((place, SequenceMatcher(
                 None, place_name, db_place_name).quick_ratio()))
@@ -211,13 +270,12 @@ def find_db_entry(place_name: str) -> Place:
     # Find the most popular match of those tied for the lead.
     reviews = find_reviews()
     if not reviews:
-        return top_match
+        return top_match[0]
 
     counts = [(place, (reviews[:, 1] == place.id).sum()) for place in tops]
     most_popular = max(counts, key=lambda x: x[1])
 
     return most_popular[0]
-
 
 
 def find_db_entries(place_names: Iterable[str]) -> Tuple[List[Place], List[str]]:
@@ -256,14 +314,18 @@ def process_input(place_str: str):
     # Combine scores for reviews and tags
     similars = []
     for place in entries:
+        if review_data:
+            similar = find_similar(place, review_data)
 
-        similar = find_similar(place, review_data)
+
         similar_tag = find_similar_tagged(place)
         similar_tag = modulate_tagged(similar_tag)
 
         similar_combined = defaultdict(int)
-        for place, review_score in similar.items():
-            similar_combined[place] += review_score
+        if review_data:
+            for place, review_score in similar.items():
+                similar_combined[place] += review_score
+
         for place, review_score in similar_tag.items():
             similar_combined[place] += review_score
 
