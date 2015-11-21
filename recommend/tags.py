@@ -1,19 +1,19 @@
 # This file contains python code represeting tags, including code to add database entries.
 from collections import namedtuple
 
+from django.db.models import Q
+
+from .models import Place, Tag, Country
+
+
 # usa is a bool. If True, country_state is a state; else a country.
 TagKey = namedtuple('TagKey', ['city', 'country_state', 'usa'])
 
-
-from django.db.models import Q
-
-from .models import Place, Tag, Country, CountryTag
-
-
 place_tags = {
     TagKey('cambridge', 'united kingdom', False): ['university', 'historic'],
-    TagKey('valetta', 'malta', False): ['mediterranean', 'island', 'beach', 'scenic',
+    TagKey('valletta', 'malta', False): ['mediterranean', 'island', 'beach', 'scenic',
                                         'culture'],
+    TagKey('brussels', 'belgium', False): ['capital', 'historic', 'culture'],
     TagKey('florence', 'italy', False): ['art', 'historic', 'culture', 'tuscany'],
     TagKey('milan', 'italy', False): ['culture' 'art'],
     TagKey('pisa', 'italy', False):  ['art', 'mediterranean', 'tuscany'],
@@ -23,10 +23,12 @@ place_tags = {
     TagKey('louisville', 'kentucky', True): ['alcohol', 'southern us'],
     TagKey('washington', 'district of columbia', True): ['capital', 'major'],
     TagKey('philadelphia', 'pennsylvania', True): ['historic'],
-    TagKey('las vegas', 'nevada', True): ['gambling, modern, nightlife', 'theater'],
+    TagKey('las vegas', 'nevada', True): ['gambling', 'modern', 'nightlife', 'theater'],
     TagKey('houston', 'texas', True): ['southern us'],
-    TagKey('maui', 'hawaii', True): ['beach', 'tropical', 'island', 'coastal',
-                                     'resort'],
+    # TagKey('maui', 'hawaii', True): ['beach', 'tropical', 'island', 'coastal',
+    #                                  'resort'],
+    TagKey('honolulu', 'hawaii', True): ['beach', 'tropical', 'island', 'coastal',
+                                         'resort'],
     TagKey('austin', 'texas', True): ['southern us'],
     TagKey('cleveland', 'texas', True): ['southern us'],
     TagKey('atlanta', 'georgia', True): ['southern us'],
@@ -34,9 +36,9 @@ place_tags = {
     TagKey('orlando', 'florida', True): ['beach', 'resort', 'children', 'amusement'],
     TagKey('new york', 'new york', True): ['commerce', 'major', 'art',
                                            'dense', 'food', 'coastal'],
-    TagKey('catskills', 'new york', True): ['hipster', 'nature'],
+    TagKey('catskill', 'new york', True): ['hipster', 'nature'],
     TagKey('salt lake city', 'utah', True): ['western us', 'nature'],
-    TagKey('wasatch mountains', 'utah', True): ['moutnains', 'ski', 'resort'],
+    # TagKey('wasatch mountains', 'utah', True): ['moutnains', 'ski', 'resort'],
     TagKey('paris', 'france', False): ['capital', 'major', 'art', 'culture', 'food'],
     TagKey('chaniá', 'greece', False): ['beach', 'coastal', 'crete'],
     TagKey('réthymno', 'greece', False): ['beach', 'coastal', 'crete'],
@@ -55,7 +57,7 @@ place_tags = {
     TagKey('puerto plata', 'dominican republic', False): ['beach', 'coastal, resort',
                                                           'tropical'],
     TagKey('marrakech', 'morocco', False): ['culture'],
-    TagKey('fez', 'morocco', False): [],
+    TagKey('fès', 'morocco', False): [],
     TagKey('siem reap', 'cambodia', False): ['historic', 'ancient', 'genocide'],
     TagKey('istanbul', 'turkey', False): ['capital', 'culture', 'coastal'],
     # Cant' find any cities in vietnam
@@ -71,41 +73,77 @@ place_tags = {
     TagKey('ubud', 'indonesia', False): [],
     TagKey('bali', 'indonesia', False): ['rainy', 'tropical', 'culture', 'island'],
     TagKey('jakarta', 'indonesia', False): ['coastal', 'commerce', 'modern'],
-    TagKey('rotterdam', 'the netherlands', False): ['culture', 'major', 'art',
+    TagKey('rotterdam', 'netherlands', False): ['culture', 'major', 'art',
                                                     'coastal'],
     TagKey('cusco', 'peru', False): ['historic', 'ancient', 'mountains'],
-    TagKey('hokkaido', 'japan', False): ['ski', 'mountains'],
+    TagKey('sapporo', 'japan', False): ['ski', 'mountains'],
     TagKey('tokyo', 'japan', False): ['historic', 'ancient', 'culture', 'capital',
                                       'major', 'commerce'],
     TagKey('saint petersburg', 'russia', False): ['historic', 'culture'],
     TagKey('bangkok', 'thailand', False): ['major', 'culture'],
     TagKey('kathmandu', 'nepal', False): ['scenic'],
     TagKey('budapest', 'hungary', False): ['capital', 'major', 'culture'],
-    TagKey('queenstown', 'new zealand', False): ['scenic', 'mountains'],
-    TagKey('hong kong', 'china', False): ['major', 'commerce'],
-    TagKey('chengdu', 'china', False): ['wildlife', 'commerce', 'culture'],
-    TagKey('sydney', 'austalia', False): ['major', 'coastal', 'commerce', 'beach'],
-    TagKey('canberra', 'austalia', False): ['capital', 'coastal'],
+    # TagKey('queenstown', 'new zealand', False): ['scenic', 'mountains'],
+    # todo issues with finding china cities atm.
+    # TagKey('hong kong', 'china', False): ['major', 'commerce'],
+    # TagKey('chengdu', 'china', False): ['wildlife', 'commerce', 'culture'],
+    TagKey('sydney', 'australia', False): ['major', 'coastal', 'commerce', 'beach'],
+    TagKey('perth', 'australia', False): ['coastal', 'beach'],
+    TagKey('canberra', 'australia', False): ['capital', 'coastal'],
     TagKey('rio de janeiro', 'brazil', False): ['major', 'coastal', 'beach', 'scenic',
                                                 'coastal'],
-    TagKey('', '', False): [],
-    TagKey('', '', False): [],
-    TagKey('', '', False): [],
-    TagKey('', '', False): [],
+    # TagKey('', '', False): [],
+    # TagKey('', '', False): [],
+    # TagKey('', '', False): [],
+    # TagKey('', '', False): [],
 
 }
 
 # Country tags apply to all places in a country.  Do not include subregions
 # that shadow model Subregions; this should be more specific.
 country_tags = {
+    'cape verde': ['island'],
+    'the bahamas': ['island', 'tropical', 'resort'],
+    'bahrain': ['muslim, desert', 'island'],
+    'brunei': ['island'],
+    'cyprus': ['island', 'mediterranean'],
+    'dominican republic': ['island', 'tropical'],
+    'east timor': ['island'],
     'finland': ['nordic'],
-    'denmark': ['nordic'],
-    'sweden': ['nordic'],
-    'iceland': ['nordic'],
-    'norway': ['nordic'],
+    'greece': ['mediterranean', 'catholic'],
+    'denmark': ['nordic', 'cold'],
+    'sweden': ['nordic', 'cold'],
+    'norway': ['nordic', 'cold'],
     'india': ['subcontinent'],
+    'republic of ireland': ['island', 'catholic'],
+    'italy': ['mediterranean', 'catholic'],
     'bangladesh': ['subcontinent'],
-    'pakistan': ['subcontinent'],
+    'pakistan': ['subcontinent', 'muslim'],
+    'japan': ['island'],
+    'united kingdom': ['island'],
+    'australia': ['island'],
+    'cuba': ['island', 'tropical'],
+    'fiji': ['island', 'tropical', 'resort'],
+    'jamaica': ['island', 'tropical', 'resort'],
+    'maldives': ['island', 'tropical'],
+    'madagascar': ['island', 'wildlife'],
+    'malta': ['island'],
+    'morocco': ['muslim'],
+    'new zealand': ['island'],
+    'russia': ['cold'],
+    'haiti': ['island', 'tropical', 'poverty'],
+    'tonga': ['island', 'pacific island'],
+    'papua new guinea': ['island'],
+    'indonesia': ['island', 'muslim'],
+    'united arab emirates': ['muslim', 'desert'],
+    'saudi arabia': ['muslim', 'desert'],
+    'jordan': ['muslim', 'desert'],
+    'iraq': ['muslim', 'desert'],
+    'iran': ['muslim', 'desert'],
+    'oman': ['muslim', 'desert'],
+    'sri lanka': ['island'],
+    'yemen': ['muslim', 'desert'],
+
 }
 
 
@@ -123,17 +161,13 @@ def find_db_entry(place: TagKey) -> Place:
             raise AttributeError("UHOH, no result on {}".format(place))
         return result
 
-    # Multiple paris entries; use filter...[0] instead of get fo rnow.
-    # return Place.objects.get(Q(city=place.city), Q(country__name=place.country_state))
-    return Place.objects.filter(Q(city=place.city), Q(country__name=place.country_state))[0]
-
+    return Place.objects.get(Q(city=place.city), Q(country__name=place.country_state))
 
 
 def make_tags():
     """Populate the database with tags based on a dict.  Create the tag entries
     if needed, and associate them with places."""
     for tag_key, tag_names in place_tags.items():
-        print(tag_key.city, tag_key.country_state)
         place = find_db_entry(tag_key)
 
         for tag_name in tag_names:
@@ -148,6 +182,6 @@ def make_country_tags():
     for country_name, tag_names in country_tags.items():
         country = Country.objects.get(name=country_name)
         for tag_name in tag_names:
-            tag, created = CountryTag.objects.get_or_create(name=tag_name)
+            tag, created = Tag.objects.get_or_create(name=tag_name)
             country.tags.add(tag)
         country.save()

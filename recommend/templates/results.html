@@ -4,23 +4,34 @@
 
     <div class="row">
         <div class="col-md-8 col-md-offset-2 col-xs-12">
-            <h2>Based on your choices of:
-                <ul>
+            <h2>Based on your choices of</h2>
+            <ul>
                 {% for entry in  entries %}
                     <li>{{ entry }}</li>
                 {% endfor %}
-                </ul>
-            </h2>
-            <h2>here are your recommendations:</h2>
+            </ul>
+
+            <h2>Here are your recommendations:</h2>
 
             <table class="table">
                 {% for city in similar %}
-                <tr>
-                    <td>{{ city.0 }}</td>
-{#                    <td>{{ city.1 }}</td>#}
-                </tr>
+                    <tr>
+                        <td>{{ city.0 }}</td>
+                        {#                    <td>{{ city.1 }}</td>#}
+                    </tr>
                 {% endfor %}
             </table>
+
+            {% if not_found %}
+                <h2>We couldn't find the following locations you entered:</h2>
+                <ul>
+                    {% for nf in not_found %}
+                        <li>{{ nf }}</li>
+                    {% endfor %}
+                </ul>
+                <p>We're working on updating our information; check back later!</p>
+            {% endif     %}
+
 
         </div>
     </div>

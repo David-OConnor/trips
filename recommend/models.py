@@ -21,19 +21,19 @@ class Subregion(models.Model):
 
 
 class Tag(models.Model):
-    """For tagging places, ie 'beach', 'historic', 'business'"""
+    """For tagging places and countries, ie 'beach', 'historic', 'business'"""
     name = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.name
 
 
-class CountryTag(models.Model):
-    """For tagging countries, ie 'nordic', 'subcontinent'"""
-    name = models.CharField(max_length=50, unique=True)
-
-    def __str__(self):
-        return self.name
+# class CountryTag(models.Model):
+#     """For tagging countries, ie 'nordic', 'subcontinent'"""
+#     name = models.CharField(max_length=50, unique=True)
+#
+#     def __str__(self):
+#         return self.name
 
 
 class Country(models.Model):
@@ -46,7 +46,7 @@ class Country(models.Model):
     # JSON string, ie '['england', 'britain']'
     alternate_names = models.TextField(null=True)
     subregion = models.ForeignKey(Subregion, null=True, related_name='countries')
-    tags = models.ManyToManyField(CountryTag, null=True, related_name='countries')
+    tags = models.ManyToManyField(Tag, null=True, related_name='countries')
 
     def __str__(self):
         return self.name

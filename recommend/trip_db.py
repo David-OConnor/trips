@@ -121,3 +121,22 @@ def populate_countries() -> None:
         # Country already exists.
         except IntegrityError:
             pass
+
+
+def remove_duplicates() -> None:
+    """Remove duplicate places outside the US; ie only have one London, England,
+       and one Paris, france. Duplicates in the USA are ok, due to state names."""
+    for country in Country.objects.all():
+        if country.name == 'united states':
+            continue
+
+        place_names = []
+        for place in country.places.all():
+            if place.city in place_names:
+                print("Removed {}".format(place))
+                place.delete()
+            else:
+                try:
+                    place_names.append(place.city)
+                except UnicodeEncodeError:
+                    continue

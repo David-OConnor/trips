@@ -16,12 +16,13 @@ def index(request):
 
             # Similar contains the recommendations; entries contains the original
             # submissions.
-            similar, entries = rec_code.process_input(cities)
+            similar, entries, not_found = rec_code.process_input(cities)
             similar = list(similar.items())
             if not similar:
                 return render(request, 'no_results.html', {'entries': entries})
 
-            context = {'similar': similar, 'entries': entries}
+            context = {'similar': similar, 'entries': entries,
+                       'not_found': not_found}
             return render(request, 'results.html', context)
 
     # if a GET (or any other method) we'll create a blank form

@@ -1,7 +1,7 @@
 from collections import defaultdict, OrderedDict
 from difflib import SequenceMatcher
 import json
-from itertools import chain
+from itertools import chain, islice
 from typing import List, Iterable, Tuple, Generator, Iterator
 
 import numpy as np
@@ -9,7 +9,7 @@ import numpy as np
 
 from django.db.models import Q
 
-from .models import Place, Submission
+from .models import Place, Country, Submission
 
 
 # todo scikit cosine similarity
@@ -95,41 +95,38 @@ def find_similar(place: Place, data: np.ndarray) -> OrderedDict:
     query = Place.objects.filter(id__in=data[:, 1])
     scores = {place2: correlate(place, place2, data) for place2 in query if place != place2}
 
-    return scores  # todo removed sort in this func.
+    return scores
 
 
 def find_similar_tagged(place: Place) -> OrderedDict:
     """This function is like find_similar, but uses tags and subregions to
     find related places rather than user-submitted data."""
 
-    # Ignore places that have no tags, and are not in tagged countries
-    places = Place.objects.exclude(Q(tags__isnull=True), Q(country__tags__isnull=True))
-    # places = Place.objects.exclude(tags__isnull=True)
+    # use a set, since some tags may be duplicated between place and country.
+    tags = set(chain(place.tags.all(), place.country.tags.all()))
+    tag_ids = [tag.id for tag in tags]
+    print("tags", tags)
 
-    # Include tags for the place's country.
-    # todo Note: subregions won't work properly unless more/all places are included
-    # todo in the place search above, which excludes non-tagged ones.
-    tags = list(chain(place.tags.all(), place.country.tags.all(), [place.country.subregion]))
+    # Note: Places with no matching tags are filtered out, for speed.
+    # If there's at least one matching place tag, that places country tags and
+    # subregions count too.
+    places_with_matching_tags = set(Place.objects.filter(tags__id__in=tag_ids))
 
-    place_tag_data = {}  # todo defaultdict?
-    for place2 in places:
+    place_tag_data = defaultdict(int)
+    for place2 in places_with_matching_tags:
         if place == place2:
             continue
 
-        place_tag_data[place2] = 0
-
-        tags2 = chain(place2.tags.all(), place2.country.tags.all(), [place2.country.subregion])
+        tags2 = set(chain(place2.tags.all(), place2.country.tags.all()))
+        # Plus one for each matching tag.
         for tag in tags2:
             if tag in tags:
                 place_tag_data[place2] += 1
+        # Plus one for matching subregion.
+        if place.country.subregion == place2.country.subregion:
+            place_tag_data[place2] += 1
 
-    place_tag_data = {k: v for k, v in place_tag_data.items() if v > 0}
     return place_tag_data
-
-    # todo removed sort  here.
-    # place_tag_results = sort_by_key(place_tag_data)
-
-    # return place_tag_results
 
 
 def modulate_tagged(tag_results: OrderedDict) ->  OrderedDict:
@@ -138,9 +135,7 @@ def modulate_tagged(tag_results: OrderedDict) ->  OrderedDict:
     # Input dict values are the number of common tags.
     multiplier = .05
     result = {k: v * multiplier for k, v in tag_results.items()}
-    return result  # todo removed sort in this func.
-    # return sort_by_key(result)
-
+    return result
 
 
 def find_similar_multiple(similars: Iterable[OrderedDict]) -> OrderedDict:
@@ -159,8 +154,6 @@ def find_similar_multiple(similars: Iterable[OrderedDict]) -> OrderedDict:
         import numpy as np
         result[city] = np.mean(scores)
     return result
-    # todo removed sort in this func.
-    # return sort_by_key(result)
 
 
 def ratio_helper(place: Place, place_name, country_names) -> Iterator[Tuple[Place, float]]:
@@ -169,90 +162,101 @@ def ratio_helper(place: Place, place_name, country_names) -> Iterator[Tuple[Plac
         yield place, SequenceMatcher(None, name, db_place_name).quick_ratio()
 
 
-def find_db_entries(place_names: Iterable[str]) -> Iterator[Place]:
+def find_db_entry(place_name: str) -> Place:
+    """Find the best match for an input string"""
+    min_match_ratio = .7
+
+    ratios = []
+    # Narrow the number of objects to filter with a startswith query.
+    for place in Place.objects.filter(city__istartswith=place_name[:3]):
+        # Allow entries that include the country name, to help narrow down
+        # the place.
+
+        # todo clean up this if/else and use DRY if possible.
+        if place.country.alternate_names:
+            alternate_country_names = json.loads(place.country.alternate_names)
+
+            alt_ratios = []
+            for alt_name in alternate_country_names:
+                db_place_name = ' '.join([place.city, alt_name])
+                alt_ratios.append((place, SequenceMatcher(None, place_name, db_place_name).quick_ratio()))
+
+            alt_matches = sorted(alt_ratios, key=lambda x: x[1], reverse=True)
+            ratios.append(alt_matches[0])
+        else:
+
+            # todo improve this logic.
+            # If there are no spaces in the name, no country was specified.
+            if ' ' not in place_name:
+                db_place_name = place.city
+            elif place.country.name == 'united states':
+                db_place_name = ' '.join([place.city, place.state])
+            else:
+                db_place_name = ' '.join([place.city, place.country.name])
+
+
+            ratios.append((place, SequenceMatcher(
+                None, place_name, db_place_name).quick_ratio()))
+
+    filtered = filter(lambda x: x[1] > min_match_ratio, ratios)
+    matches = sorted(filtered, key=lambda x: x[1], reverse=True)
+
+    if not matches:
+        return
+
+    # Find matches tied for the lead.
+    top_match = matches[0]
+    tops = [m[0] for m in matches if m[1] == top_match[1]]
+
+    # Find the most popular match of those tied for the lead.
+    reviews = find_reviews()
+    if not reviews:
+        return top_match
+
+    counts = [(place, (reviews[:, 1] == place.id).sum()) for place in tops]
+    most_popular = max(counts, key=lambda x: x[1])
+
+    return most_popular[0]
+
+
+
+def find_db_entries(place_names: Iterable[str]) -> Tuple[List[Place], List[str]]:
     """Accept place name strings, as passed from a web form; find their
     corresponding database entries."""
-    min_match_ratio = .5
+
 
     # todo if matches are identical or similar (florence italy vs usa), use
     # todo number of submissions to pick the most popular.
+    entries, not_found = [], []
 
     for place_name in place_names:
-        ratios = []
-        # Narrow the number of objects to filter with a startswith query.
-        for place in Place.objects.filter(city__istartswith=place_name[:3]):
-            # Allow entries that include the country name, to help narrow down
-            # the place.
+        place = find_db_entry(place_name)
 
-            # todo clean up this if/else and use DRY if possible.
-            if place.country.alternate_names:
-                alternate_country_names = json.loads(place.country.alternate_names)
+        if place:
+            entries.append(place)
+        else:
+            not_found.append(place_name)
 
-                alt_ratios = []
-                for alt_name in alternate_country_names:
-                    db_place_name = ' '.join([place.city, alt_name])
-                    alt_ratios.append((place, SequenceMatcher(None, place_name, db_place_name).quick_ratio()))
-
-                alt_matches = sorted(alt_ratios, key=lambda x: x[1], reverse=True)
-                ratios.append(alt_matches[0])
-            else:
-
-                # todo improve this logic.
-                # If there are no spaces in the name, no country was specified.
-                if ' ' not in place_name:
-                    db_place_name = place.city
-                elif place.country.name == 'united states':
-                    db_place_name = ' '.join([place.city, place.state])
-                else:
-                    db_place_name = ' '.join([place.city, place.country.name])
-
-
-                ratios.append((place, SequenceMatcher(
-                    None, place_name, db_place_name).quick_ratio()))
-
-        filtered = filter(lambda x: x[1] > min_match_ratio, ratios)
-        matches = sorted(filtered, key=lambda x: x[1], reverse=True)
-
-        if not matches:
-            continue
-
-        # Find matches tied for the lead.
-        top_match = matches[0]
-        tops = [m[0] for m in matches if m[1] == top_match[1]]
-
-        # Find the most popular match of those tied for the lead.
-        reviews = find_reviews()
-        counts = [(place, (reviews[:, 1] == place.id).sum()) for place in tops]
-        most_popular = max(counts, key=lambda x: x[1])
-
-        # # todo you could store population and do it that way instead.
-        # # if none of the top matches have been chosen before, eliminate ones
-        # # in the USA; copycats.
-        # if most_popular[1] == 0:
-        #     for place in tops:
-        #         if place.country.name != 'united states':
-        #             yield place
-        #             break
-        # else:
-        yield most_popular[0]
+    return entries, not_found
 
 
 def process_input(place_str: str):
     """Find recommendations based on input places. This function handles the
     overall processing, includes tweaks for web page display."""
+    num_to_display = 10
     places = (place.strip() for place in place_str.split(','))
 
-    entries = find_db_entries(places)
+    entries, not_found = find_db_entries(places)
     entries = list(entries)
-    print("DB entries:", entries)
 
-    submit_new(entries)
+    # submit_new(entries)
 
     review_data = find_reviews()
 
     # Combine scores for reviews and tags
     similars = []
     for place in entries:
+
         similar = find_similar(place, review_data)
         similar_tag = find_similar_tagged(place)
         similar_tag = modulate_tagged(similar_tag)
@@ -265,24 +269,12 @@ def process_input(place_str: str):
 
         similars.append(similar_combined)
 
-
-    # # Combine scores for reviews and tags
-    # similars = []
-    # for place in entries:
-    #     similar = find_similar(place, review_data)
-    #     similar_tag = find_similar_tagged(place)
-    #
-    #     similar_combined = {}
-    #     for place, review_score in similar.items():
-    #         similar_combined[place] = review_score + similar_tag[place]
-    #     similars.append(similar_combined)
-
     similars = find_similar_multiple(similars)
     similars = trim_output(similars, entries)
 
-    # todo consider a separate function for trimming the data.
+    similars = OrderedDict(islice(similars.items(), num_to_display))
 
-    return similars, entries
+    return similars, entries, not_found
 
 
 def trim_output(similars, entries):
