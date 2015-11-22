@@ -4,10 +4,12 @@
 
     <div class="row">
         <div class="col-md-8 col-md-offset-2 col-xs-12">
-            <h2>Based on your choices of
+            <h2>Based on your choices of</h2>
+            <ul>
                 {% for entry in  entries %}
-                    {{ entry }};
+                    <li>{{ entry }}</li>
                 {% endfor %}
+            </ul>
             </h2>
             <h3>Unfortunately, we don't have recommendations for this set of
             places yet. Check back later, and we'll hopefully have this sorted.</h3>

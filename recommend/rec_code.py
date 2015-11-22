@@ -9,11 +9,13 @@ import numpy as np
 
 from django.db.models import Q
 
-from .models import Place, Country, Submission
+from .models import Place, Country, Submission, fips_5_2_codes
 
 
 # default_places avoids minor cities being defaulted to instead of more notable ones;
-# ie london, alabama instead of london, united kingdom. Could be databse entries instead.
+# ie london, alabama instead of london, united kingdom. todo Could be databse entries instead.
+# todo uses a list to denote US state; consider using a tuple with True/False US flag instead
+# todo for each entry.
 default_places = {
     'london': 'united kingdom',
     'cambridge': 'united kingdom',
@@ -64,6 +66,71 @@ default_places = {
     'warsaw': 'poland',
     'vienna': 'austria',
     'valencia': 'spain',
+    'sydney': 'australia',
+    'perth': 'australia',
+    'budapest': 'hungary',
+    'stockholm': 'sweden',
+
+    'washington': ['district of columbia'],
+    'albuquerque': ['new mexico'],
+    'anchorage': ['alaska'],
+    'austin': ['texas'],
+    'arlington': ['virginia'],
+    'asheville': ['north carolina'],
+    'atlanta': ['georgia'],
+    'baltimore': ['maryland'],
+    'boston': ['massachusetts'],
+    'branson': ['missouri'],
+    'chattanooga': ['tennessee'],
+    'charleston': ['south carolina'],
+    'charllotte': ['north carolina'],
+    'colorado springs': ['colorado'],
+    'chicago': ['illinois'],
+    'dallas': ['texas'],
+    'denver': ['colorado'],
+    'destin': ['florida'],
+    'fort lauderdale': ['florida'],
+    'key west': ['florida'],
+    'new york': ['new york'],
+    'honolulu': ['hawaii'],
+    'houston': ['texas'],
+    'lahaina': ['hawaii'],
+    'los angeles': ['california'],
+    'indianapolis': ['indiana'],
+    'miami': ['florida'],
+    'milwaukee': ['wisconsin'],
+    'memphis': ['tennessee'],
+    'monterey': ['california'],
+    'myrtle beach': ['south carolina'],
+    'nashville': ['tennessee'],
+    'new orleans': ['louisiana'],
+    'kansas city': ['kansas'],
+    'las vegas': ['nevada'],
+    'oklahoma city': ['oklahoma'],
+    'orlando': ['florida'],
+    'palm springs': ['california'],
+    'phoneix': ['arizona'],
+    'park city': ['utah'],
+    'portland': ['oregon'],
+    'richmond': ['virginia'],
+    'saint augustine': ['florida'],
+    'san juan': ['puerto rico'],
+    'san antonio': ['texas'],
+    'saint louis': ['missouri'],
+    'santa monica': ['california'],
+    'salt lake city': ['utah'],
+    'san diego': ['california'],
+    'san francisco': ['california'],
+    'santa fe': ['california'],
+    'san jose': ['california'],
+    'savannah': ['georgia'],
+    'scottsdale': ['california'],
+    'sedona': ['arizona'],
+    'seattle': ['washington'],
+    'tucson': ['arizona'],
+
+
+
 }
 
 
@@ -216,66 +283,126 @@ def ratio_helper(place: Place, place_name, country_names) -> Iterator[Tuple[Plac
         yield place, SequenceMatcher(None, name, db_place_name).quick_ratio()
 
 
+def process_default_place(place_name: str) -> Place:
+    """Finds a place object associated with a city name that's in default_places."""
+    country_state = default_places[place_name]
+    if isinstance(country_state, list):  # ie it's a US state.
+        country_state = country_state[0]
+        result = None
+        for match in Place.objects.filter(city=place_name).filter(country='usa'):
+            if match.state == country_state:
+                result = match
+                break
+        if result is None:
+            raise AttributeError("Problem with default US city logic")
+        return result
+
+    else:
+        # This requires no duplicates exist; else an exception is raised.
+        return Place.objects.get(Q(city=place_name),
+                                 Q(country__name=default_places[place_name]))
+
+
+def popularity_sort(matches: Iterable[Tuple[Place, float]]) -> Place:
+    """Sort a series of places by most-reviewed."""
+    reviews = find_reviews()
+    if not reviews:
+        return matches[0]
+
+    counts = [(place, (reviews[:, 1] == place.id).sum()) for place in matches]
+    most_popular = max(counts, key=lambda x: x[1])
+
+    return most_popular[0]
+
+
 def find_db_entry(place_name: str) -> Place:
-    """Find the best match for an input string"""
+    """Find the best match for an input search string."""
+    # todo currently requires an exact match to a default place; change this?
+    place_name = place_name.lower()
+    if place_name in default_places:
+        return process_default_place(place_name)
+
     min_match_ratio = .7
-
+    words = place_name.split()
     ratios = []
-    # Narrow the number of objects to filter with a startswith query.
-    for place in Place.objects.filter(city__istartswith=place_name[:3]):
-        # Allow entries that include the country name, to help narrow down
-        # the place.
+    # Requiring the first three chars to match is rigid, but improves speed.
+    potential_matches = Place.objects.filter(city__istartswith=place_name[:3])
 
-        # todo clean up this if/else and use DRY if possible.
-        if place.country.alternate_names:
-            alternate_country_names = json.loads(place.country.alternate_names)
-
-            alt_ratios = []
-            for alt_name in alternate_country_names:
-                db_place_name = ' '.join([place.city, alt_name])
-                alt_ratios.append((place, SequenceMatcher(None, place_name, db_place_name).quick_ratio()))
-
-            alt_matches = sorted(alt_ratios, key=lambda x: x[1], reverse=True)
-            ratios.append(alt_matches[0])
-        else:
-
-            # todo improve this logic.
-            # If there are no spaces in the name, no country was specified.
-            # todo make place_names work for us cities too.
-            if place_name in default_places and default_places[place_name] != 'united states':
-                # This requires no duplicates exist; else an exception is raised.
-                return Place.objects.get(Q(city=place_name),
-                                         Q(country__name=default_places[place_name]))
-
-            if ' ' not in place_name:
-                db_place_name = place.city
-            elif place.country.name == 'united states':
-                db_place_name = ' '.join([place.city, place.state])
-            else:
-                db_place_name = ' '.join([place.city, place.country.name])
-
+    # todo this doesn't work for two-word cities!
+    if len(words) == 1:  # city/town name specified only.
+        for place in potential_matches:
             ratios.append((place, SequenceMatcher(
-                None, place_name, db_place_name).quick_ratio()))
+                None, place_name, place.city).quick_ratio()))
 
+    else:
+        country_names = []
+        # country_alt names is a dict with format {alternate name: country name}
+        country_alt_names = {}
+        for country in Country.objects.all():
+            country_names.append(country.name)
+            if country.alternate_names:
+                for alt_name in json.loads(country.alternate_names):
+                    country_alt_names[alt_name] = country.alpha3
+
+        state_names = fips_5_2_codes.keys()
+        # todo don't require an exact match; instead of asking if it's equal, run
+        # todo a sequencematcher on and make sure it passes a thresh?
+        # Assume the first word is the city, or at least part of it.
+        for i, word in enumerate(words[1:]):
+            # Match against a city name; assume the city is the words up to,
+            # but not including the one that triggered this country or state match.
+            # Use i + 1 in the index, since you're skipping the first index in
+            # the for loop.
+            city_name_guess = ' '.join(words[:i + 1])
+            entry_name_guess = ' '.join([city_name_guess, word])
+
+            if word in country_names:
+                for place in potential_matches.filter(country__name=word):
+
+                    db_name_guess = ' '.join([place.city, place.country.name])
+                    ratios.append((place, SequenceMatcher(
+                        None, entry_name_guess, db_name_guess).quick_ratio()))
+
+            elif word in country_alt_names:
+                for place in potential_matches.filter(country=country_alt_names[word]):
+                    db_name_guess = ' '.join([place.city, word])
+                    ratios.append((place, SequenceMatcher(
+                        None, entry_name_guess, db_name_guess).quick_ratio()))
+
+            elif word in state_names:
+                for place in potential_matches.filter(country='usa'):
+                    if place.state == word:
+                        db_name_guess = ' '.join([place.city, place.state])
+                        ratios.append((place, SequenceMatcher(
+                            None, entry_name_guess, db_name_guess).quick_ratio()))
+
+        for place in potential_matches:
+            # Skip if we already added it after guessing the right country.
+            if place in [r[0] for r in ratios]:
+                continue
+
+            if place.country.alpha3 == 'usa':
+                country_state = place.state
+            else:
+                country_state = place.country.name
+
+            db_name_guess = ' '.join([place.city, country_state])
+            ratios.append((place, SequenceMatcher(
+                None, place_name, db_name_guess).quick_ratio()))
+
+    # Remove low-quality matches, and sort by highest match.
     filtered = filter(lambda x: x[1] > min_match_ratio, ratios)
-    matches = sorted(filtered, key=lambda x: x[1], reverse=True)
-
-    if not matches:
+    if not filtered:
         return
+
+    matches = sorted(filtered, key=lambda x: x[1], reverse=True)
 
     # Find matches tied for the lead.
     top_match = matches[0]
     tops = [m[0] for m in matches if m[1] == top_match[1]]
 
     # Find the most popular match of those tied for the lead.
-    reviews = find_reviews()
-    if not reviews:
-        return top_match[0]
-
-    counts = [(place, (reviews[:, 1] == place.id).sum()) for place in tops]
-    most_popular = max(counts, key=lambda x: x[1])
-
-    return most_popular[0]
+    return popularity_sort(tops)
 
 
 def find_db_entries(place_names: Iterable[str]) -> Tuple[List[Place], List[str]]:

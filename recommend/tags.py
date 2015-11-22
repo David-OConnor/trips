@@ -10,6 +10,7 @@ from .models import Place, Tag, Country
 TagKey = namedtuple('TagKey', ['city', 'country_state', 'usa'])
 
 place_tags = {
+    TagKey('bucharest', 'romania', False): ['capital', 'historic',],
     TagKey('cambridge', 'united kingdom', False): ['university', 'historic'],
     TagKey('valletta', 'malta', False): ['mediterranean', 'island', 'beach', 'scenic',
                                         'culture'],
@@ -80,6 +81,7 @@ place_tags = {
     TagKey('tokyo', 'japan', False): ['historic', 'ancient', 'culture', 'capital',
                                       'major', 'commerce'],
     TagKey('saint petersburg', 'russia', False): ['historic', 'culture'],
+    TagKey('stockholm', 'sweden', False): ['capital', 'coastal'],
     TagKey('bangkok', 'thailand', False): ['major', 'culture'],
     TagKey('kathmandu', 'nepal', False): ['scenic'],
     TagKey('budapest', 'hungary', False): ['capital', 'major', 'culture'],
