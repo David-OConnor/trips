@@ -283,9 +283,9 @@ def ratio_helper(place: Place, place_name, country_names) -> Iterator[Tuple[Plac
         yield place, SequenceMatcher(None, name, db_place_name).quick_ratio()
 
 
-def process_default_place(place_name: str) -> Place:
+def process_default_place(place_name: str, default: dict) -> Place:
     """Finds a place object associated with a city name that's in default_places."""
-    country_state = default_places[place_name]
+    country_state = default[place_name]
     if isinstance(country_state, list):  # ie it's a US state.
         country_state = country_state[0]
         result = None
@@ -300,7 +300,7 @@ def process_default_place(place_name: str) -> Place:
     else:
         # This requires no duplicates exist; else an exception is raised.
         return Place.objects.get(Q(city=place_name),
-                                 Q(country__name=default_places[place_name]))
+                                 Q(country__name=default[place_name]))
 
 
 def popularity_sort(matches: Iterable[Tuple[Place, float]]) -> Place:
@@ -317,10 +317,22 @@ def popularity_sort(matches: Iterable[Tuple[Place, float]]) -> Place:
 
 def find_db_entry(place_name: str) -> Place:
     """Find the best match for an input search string."""
-    # todo currently requires an exact match to a default place; change this?
     place_name = place_name.lower()
-    if place_name in default_places:
-        return process_default_place(place_name)
+
+    # Only check for an exact match if there's a space in the name.
+    if ' ' in place_name:
+        if place_name in default_places:
+            return process_default_place(place_name, default_places)
+
+    # Otherwise, check for closeness to one.
+    else:
+        closeness_to_default_thresh = .8
+        to_compare = {}
+        for name, country in default_places.items():
+            if name.startswith(place_name[:3]):
+                closeness = SequenceMatcher(None, place_name, name).quick_ratio()
+                if closeness > closeness_to_default_thresh:
+                    return process_default_place(name, {name: country})
 
     min_match_ratio = .7
     words = place_name.split()
