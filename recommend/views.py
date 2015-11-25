@@ -16,10 +16,12 @@ def index(request):
 
             # Similar contains the recommendations; entries contains the original
             # submissions.
-            similar, entries, not_found = rec_code.process_input(cities)
-            similar = list(similar.items())
+            combined_composites, composite_tag, composite_user, entries, not_found = \
+                rec_code.process_input(cities)
+            similar = list(combined_composites.items())
             if not similar:
-                return render(request, 'no_results.html', {'entries': entries})
+                return render(request, 'no_results.html', {'entries': entries,
+                                                           'not_found': not_found})
 
             context = {'similar': similar, 'entries': entries,
                        'not_found': not_found}

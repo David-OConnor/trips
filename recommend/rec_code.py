@@ -2,8 +2,7 @@ from collections import defaultdict, OrderedDict
 from difflib import SequenceMatcher
 import json
 from itertools import chain, islice
-from typing import List, Iterable, Tuple, Generator, Iterator
-
+from typing import List, Iterable, Tuple, Generator, Iterator, Dict
 import numpy as np
 # from scipy.stats.stats import pearsonr
 
@@ -12,12 +11,22 @@ from django.db.models import Q
 from .models import Place, Country, Submission, fips_5_2_codes
 
 
+# todo latitude-based ranking?
+
+
 # default_places avoids minor cities being defaulted to instead of more notable ones;
 # ie london, alabama instead of london, united kingdom. todo Could be databse entries instead.
 # todo uses a list to denote US state; consider using a tuple with True/False US flag instead
 # todo for each entry.
 default_places = {
+    'auckland': 'new zealand',
+    'arusha': 'tanzania',
+    'athens': 'greece',
+    'christchurch': 'new zealand',
+    'dar es salaam': 'tanzania',
+    'edmonton': 'canada',
     'london': 'united kingdom',
+    'calgary': 'canada',
     'cambridge': 'united kingdom',
     'paris': 'france',
     'florence': 'italy',
@@ -26,13 +35,14 @@ default_places = {
     'berlin': 'germany',
     'tokyo': 'japan',
     'delhi': 'india',
+    'hong kong': 'china',
     'mexico city': 'mexico',
-    'beijing': 'china',
+    # 'beijing': 'china',  # todo issue not finding chinese cities
     'cairo': 'egypt',
     'calcutta': 'india',
     'istanbul': 'turkey',
     'lagos': 'nigeria',
-    'shanghai': 'china',
+    # 'shanghai': 'china',# todo issue not finding chinese cities
     'karachi': 'pakistan',
     'mumbai': 'india',
     'moscow': 'russia',
@@ -40,6 +50,7 @@ default_places = {
     'lima': 'peru',
     'bengaluru': 'india',
     'bangkok': 'thailand',
+    'beijing': 'china',
     'tehran': 'iran',
     'baghdad': 'iraq',
     'dhaka': 'bangladesh',
@@ -50,6 +61,7 @@ default_places = {
     'abidjan': 'ivory coast',
     'durban': 'south africa',
     'nairobi': 'kenya',
+    'ottawa': 'canada',
     'buenos aires': 'argentina',
     'copenhagen': 'denmark',
     'nice': 'france',
@@ -62,14 +74,22 @@ default_places = {
     'kazan': 'russia',
     'rotterdam': 'netherlands',
     'seville': 'spain',
+    'taipei': 'taiwan',
+    'toronto': 'canada',
+    'melbourne': 'australia',
+    'montreal': 'canada',
     'newcastle': 'united kingdom',
     'warsaw': 'poland',
     'vienna': 'austria',
     'valencia': 'spain',
+    'shanghai': 'china',
+    'shenzhen': 'china',
     'sydney': 'australia',
     'perth': 'australia',
     'budapest': 'hungary',
     'stockholm': 'sweden',
+    'wellington': 'new zealand',
+    'winnipeg': 'canada',
 
     'washington': ['district of columbia'],
     'albuquerque': ['new mexico'],
@@ -128,6 +148,7 @@ default_places = {
     'sedona': ['arizona'],
     'seattle': ['washington'],
     'tucson': ['arizona'],
+
 
 
 
@@ -254,12 +275,11 @@ def modulate_tagged(tag_results: OrderedDict) ->  OrderedDict:
     """Convert counts to a portion that can be compared with submission-based
     correlations."""
     # Input dict values are the number of common tags.
-    multiplier = .05
-    result = {k: v * multiplier for k, v in tag_results.items()}
-    return result
+    multiplier = .1
+    return {k: v * multiplier for k, v in tag_results.items()}
 
 
-def find_similar_multiple(similars: Iterable[OrderedDict]) -> OrderedDict:
+def find_similar_multiple(similars: Iterable[OrderedDict]) -> Dict[Place, float]:
     """Organizes data from individual similarity rankings for each place."""
     composite_scores = {}
     for similar in similars:
@@ -298,6 +318,7 @@ def process_default_place(place_name: str, default: dict) -> Place:
         return result
 
     else:
+        print(place_name, default[place_name])
         # This requires no duplicates exist; else an exception is raised.
         return Place.objects.get(Q(city=place_name),
                                  Q(country__name=default[place_name]))
@@ -306,7 +327,7 @@ def process_default_place(place_name: str, default: dict) -> Place:
 def popularity_sort(matches: Iterable[Tuple[Place, float]]) -> Place:
     """Sort a series of places by most-reviewed."""
     reviews = find_reviews()
-    if not reviews:
+    if reviews is not None:
         return matches[0]
 
     counts = [(place, (reviews[:, 1] == place.id).sum()) for place in matches]
@@ -326,8 +347,11 @@ def find_db_entry(place_name: str) -> Place:
 
     # Otherwise, check for closeness to one.
     else:
+        # Save speed by utilizing an exact match if possible.
+        if place_name in default_places:
+            return process_default_place(place_name, default_places)
+
         closeness_to_default_thresh = .8
-        to_compare = {}
         for name, country in default_places.items():
             if name.startswith(place_name[:3]):
                 closeness = SequenceMatcher(None, place_name, name).quick_ratio()
@@ -404,10 +428,10 @@ def find_db_entry(place_name: str) -> Place:
 
     # Remove low-quality matches, and sort by highest match.
     filtered = filter(lambda x: x[1] > min_match_ratio, ratios)
-    if not filtered:
-        return
-
     matches = sorted(filtered, key=lambda x: x[1], reverse=True)
+
+    if not matches: # Didn't find anything.
+        return
 
     # Find matches tied for the lead.
     top_match = matches[0]
@@ -433,7 +457,6 @@ def find_db_entries(place_names: Iterable[str]) -> Tuple[List[Place], List[str]]
             entries.append(place)
         else:
             not_found.append(place_name)
-
     return entries, not_found
 
 
@@ -446,39 +469,44 @@ def process_input(place_str: str):
     entries, not_found = find_db_entries(places)
     entries = list(entries)
 
-    # submit_new(entries)
+    submit_new(entries)
 
     review_data = find_reviews()
 
-    # Combine scores for reviews and tags
-    similars = []
-    for place in entries:
-        if review_data:
-            similar = find_similar(place, review_data)
+    scores_tag = []
+    scores_user = []
+    for input_place in entries:
+        similar_tag = find_similar_tagged(input_place)
+        scores_tag.append(modulate_tagged(similar_tag))
+
+        if review_data is not None:
+            scores_user.append(find_similar(input_place, review_data))
+
+    # composite implies a score using all input places; combined means using
+    # both tag and user data.
+    composite_tag = find_similar_multiple(scores_tag)
+    composite_user = find_similar_multiple(scores_user)
 
 
-        similar_tag = find_similar_tagged(place)
-        similar_tag = modulate_tagged(similar_tag)
+    combined_composites = defaultdict(float)
+    for place, score in composite_tag.items():
+        combined_composites[place] += score
+    for place, score in composite_user.items():
+        combined_composites[place] += score
 
-        similar_combined = defaultdict(int)
-        if review_data:
-            for place, review_score in similar.items():
-                similar_combined[place] += review_score
-
-        for place, review_score in similar_tag.items():
-            similar_combined[place] += review_score
-
-        similars.append(similar_combined)
-
-    similars = find_similar_multiple(similars)
-    similars = trim_output(similars, entries)
-
-    similars = OrderedDict(islice(similars.items(), num_to_display))
-
-    return similars, entries, not_found
+    composite_tag = sort_by_key(composite_tag)
+    composite_user = sort_by_key(composite_user)
+    combined_composites = sort_by_key(combined_composites)
 
 
-def trim_output(similars, entries):
+    combined_composites = trim_output(combined_composites, entries)
+    # Sort by score, and only show the top X entries.
+    combined_composites = OrderedDict(islice(combined_composites.items(), num_to_display))
+
+    return combined_composites, composite_tag, composite_user, entries, not_found
+
+
+def trim_output(similars: Dict[Place, float], entries: List[Place]):
     """Removes computed recommendation results that are unsuitable for output."""
     # The top results will be the places submitted; remove them from the results.
 

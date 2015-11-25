@@ -10,7 +10,10 @@ from .models import Place, Tag, Country
 TagKey = namedtuple('TagKey', ['city', 'country_state', 'usa'])
 
 place_tags = {
-    TagKey('bucharest', 'romania', False): ['capital', 'historic',],
+    TagKey('auckland', 'new zealand', False): ['scenic', 'beach', 'major'],
+    TagKey('alexandria', 'egypt', False): ['historic', 'ancient', 'mediterranean'],
+    TagKey('vienna', 'austria', False): ['capital', 'art', 'music', 'historic', 'culture'],
+    TagKey('bucharest', 'romania', False): ['capital', 'historic'],
     TagKey('cambridge', 'united kingdom', False): ['university', 'historic'],
     TagKey('valletta', 'malta', False): ['mediterranean', 'island', 'beach', 'scenic',
                                         'culture'],
@@ -58,11 +61,12 @@ place_tags = {
     TagKey('puerto plata', 'dominican republic', False): ['beach', 'coastal, resort',
                                                           'tropical'],
     TagKey('marrakech', 'morocco', False): ['culture'],
+    # TagKey('montreal', 'canada', False): ['capital'],
+    TagKey('ottawa', 'canada', False): ['capital', 'cold'],
     TagKey('fès', 'morocco', False): [],
     TagKey('siem reap', 'cambodia', False): ['historic', 'ancient', 'genocide'],
     TagKey('istanbul', 'turkey', False): ['capital', 'culture', 'coastal'],
-    # Cant' find any cities in vietnam
-    # TagKey('hanoi', 'vietnam', False): ['historic'],
+    TagKey('hanoi', 'vietnam', False): ['historic'],
     TagKey('prague', 'czech republic', False): ['capital'],
     TagKey('cape town', 'south africa', False): ['beach'],
     TagKey('johannesburg', 'south africa', False): ['wildlife', 'resort'],
@@ -75,7 +79,7 @@ place_tags = {
     TagKey('bali', 'indonesia', False): ['rainy', 'tropical', 'culture', 'island'],
     TagKey('jakarta', 'indonesia', False): ['coastal', 'commerce', 'modern'],
     TagKey('rotterdam', 'netherlands', False): ['culture', 'major', 'art',
-                                                    'coastal'],
+                                                'coastal'],
     TagKey('cusco', 'peru', False): ['historic', 'ancient', 'mountains'],
     TagKey('sapporo', 'japan', False): ['ski', 'mountains'],
     TagKey('tokyo', 'japan', False): ['historic', 'ancient', 'culture', 'capital',
@@ -86,9 +90,12 @@ place_tags = {
     TagKey('kathmandu', 'nepal', False): ['scenic'],
     TagKey('budapest', 'hungary', False): ['capital', 'major', 'culture'],
     # TagKey('queenstown', 'new zealand', False): ['scenic', 'mountains'],
-    # todo issues with finding china cities atm.
-    # TagKey('hong kong', 'china', False): ['major', 'commerce'],
-    # TagKey('chengdu', 'china', False): ['wildlife', 'commerce', 'culture'],
+
+    TagKey('beijing', 'china', False): ['capital', 'major', 'industrial'],
+    TagKey('hong kong', 'china', False): ['major', 'commerce'],
+    TagKey('chengdu', 'china', False): ['wildlife', 'commerce', 'culture'],
+    TagKey('shanghai', 'china', False): ['major', 'commerce', 'coastal'],
+
     TagKey('sydney', 'australia', False): ['major', 'coastal', 'commerce', 'beach'],
     TagKey('perth', 'australia', False): ['coastal', 'beach'],
     TagKey('canberra', 'australia', False): ['capital', 'coastal'],
@@ -111,8 +118,9 @@ country_tags = {
     'cyprus': ['island', 'mediterranean'],
     'dominican republic': ['island', 'tropical'],
     'east timor': ['island'],
+    'egypt': ['muslim', 'historic'],
     'finland': ['nordic'],
-    'greece': ['mediterranean', 'catholic'],
+    'greece': ['mediterranean'],
     'denmark': ['nordic', 'cold'],
     'sweden': ['nordic', 'cold'],
     'norway': ['nordic', 'cold'],
@@ -162,7 +170,6 @@ def find_db_entry(place: TagKey) -> Place:
         if not result:
             raise AttributeError("UHOH, no result on {}".format(place))
         return result
-
     return Place.objects.get(Q(city=place.city), Q(country__name=place.country_state))
 
 

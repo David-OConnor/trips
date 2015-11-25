@@ -1,3 +1,4 @@
+from collections import namedtuple
 import csv
 import json
 from typing import List, Iterator
@@ -160,3 +161,47 @@ alternate_names = {
     'republic of macedonia': ['macedonia'],
     'democratic republic of the congo': ['congo'],
 }
+
+
+
+
+# Cities from some countries appear to be absent from the database. For example:
+# China and vietname
+
+china = Country.objects.get(alpha3='chn')
+vietnam = Country.objects.get(alpha3='vnm')
+
+manual_cities = [
+    # Don't know the division_codes, so use 0 for all.
+    Place(city='beijing', country=china, lat=39.916667, lon=116.383333, division_code=0),
+    Place(city='chengdu', country=china, lat=30.658611, lon=104.064722, division_code=0),
+    Place(city='shanghai', country=china, lat=31.2, lon=121.5, division_code=0),
+    Place(city='hong kong', country=china, lat=22.3, lon=114.2, division_code=0),
+    Place(city='macau', country=china, lat=22.166667, lon=113.55, division_code=0),
+    Place(city='lhasa', country=china, lat=29.65, lon=91.116667, division_code=0),
+    Place(city='shenzhen', country=china, lat=22.55, lon=114.1, division_code=0),
+
+    Place(city='ho chi minh city', country=vietnam, lat=10.776889, lon=106.700806, division_code=0),
+    Place(city='hanoi', country=vietnam, lat=21.028472, lon=105.854167, division_code=0),
+    Place(city='can tho', country=vietnam, lat=10.033333, lon=105.783333, division_code=0),
+    Place(city='da nang', country=vietnam, lat=16.066667, lon=108.233333, division_code=0),
+    ]
+
+
+def populate_manual_places() -> None:
+    for place in manual_cities:
+        try:
+            place.save()
+        except IntegrityError:
+            print("{} already exists; not adding".format(place))
+        else:
+            print("Added manual city {}".format(place))
+
+
+def populate():
+    """Run all notable scripts in this file; set up a database from scratch."""
+    populate_countries()
+    populate_places()
+    add_alternates()
+    populate_manual_places()
+    remove_duplicates()

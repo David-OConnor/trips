@@ -4,15 +4,24 @@
 
     <div class="row">
         <div class="col-md-8 col-md-offset-2 col-xs-12">
-            <h2>Based on your choices of</h2>
+            {% if not_found %}
+                <h2>We couldn't find the following locations you entered:</h2>
+                <ul>
+                    {% for nf in not_found %}
+                        <li>{{ nf }}</li>
+                    {% endfor %}
+                </ul>
+                <p>We're working on updating our information; check back later!</p>
+            {% endif     %}
             <ul>
+                <h2>Based on your choices of</h2>
                 {% for entry in  entries %}
                     <li>{{ entry }}</li>
                 {% endfor %}
             </ul>
             </h2>
             <h3>Unfortunately, we don't have recommendations for this set of
-            places yet. Check back later, and we'll hopefully have this sorted.</h3>
+                places yet. Check back later, and we'll hopefully have this sorted.</h3>
 
 
         </div>

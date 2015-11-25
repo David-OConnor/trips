@@ -6,6 +6,10 @@ a {
     color: #efefef;
 }
 
+a:hover {
+    text-decoration: none;
+}
+
 
 #about {
     background-color: #7659f9;
