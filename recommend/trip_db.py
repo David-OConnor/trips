@@ -8,11 +8,11 @@ from django.db import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 
 from .models import Country, Region, Subregion, Place
-from .private import mashape_key, goog_places_key
 
 
 def get_all_countries() -> List[dict]:
     """Find countries from an API."""
+    from .private import mashape_key
     url = 'https://restcountries-v1.p.mashape.com/all'
 
     payload = {'X-Mashape-Key': mashape_key}
@@ -80,6 +80,7 @@ def populate_places() -> None:
 
 # get_place is currently unused.
 def get_place(place_name: str):
+    from .private import goog_places_key
     url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json'
 
     payload = {'input': place_name,
