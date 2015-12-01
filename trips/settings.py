@@ -89,17 +89,17 @@ LOCAL_DB = 'postgres://david:test@localhost:5432/trips'
 # statement below if connecting to heroku's database from a local machine.
 DATABASES = {'default': dj_database_url.config(default=LOCAL_DB)}
 
-# For connecting to Heroku's database from a local machine.
-# This if/else prevents loading the .gitignored private file if on Heroku.
-if ON_HEROKU:
-    DATABASES = {'default': dj_database_url.config()}
-else:
-    # Not sure why I need this try; comes up when using heroku run commands.
-    try:
-        from recommend.private import heroku_db_url
-        DATABASES = {'default': dj_database_url.config(default=heroku_db_url)}
-    except ImportError:
-        DATABASES = {'default': dj_database_url.config()}
+# # For connecting to Heroku's database from a local machine.
+# # This if/else prevents loading the .gitignored private file if on Heroku.
+# if ON_HEROKU:
+#     DATABASES = {'default': dj_database_url.config()}
+# else:
+#     # Not sure why I need this try; comes up when using heroku run commands.
+#     # try:
+#     from recommend.private import heroku_db_url
+#     DATABASES = {'default': dj_database_url.config(default=heroku_db_url)}
+#     # except ImportError:
+#     #     DATABASES = {'default': dj_database_url.config()}
 
 
 # Internationalization
