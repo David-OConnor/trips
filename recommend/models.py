@@ -20,6 +20,8 @@ class Subregion(models.Model):
         return self.name
 
 
+
+
 class Tag(models.Model):
     """For tagging places and countries, ie 'beach', 'historic', 'business'"""
     name = models.CharField(max_length=50, unique=True)
@@ -83,6 +85,16 @@ class Place(models.Model):
 class Submission(models.Model):
     """An entry from one anonymous submission of several liked places."""
     places = models.ManyToManyField(Place)
+
+
+class NotFound(models.Model):
+    """User submitted places that we can't find in the database.  Used to identify
+    legitimate cities and places that need to be added."""
+    name = models.CharField(max_length=255, unique=True)
+    count = models.IntegerField(default=0)  # Number of occurances.
+
+    def __str__(self):
+        return self.name + " " + str(self.count)
 
 
 fips_5_2_codes = {

@@ -31,7 +31,7 @@ def index(request):
     else:
         form = TripForm()
 
-    context = {'title': "Trip recommendations",
+    context = {'title': "I'm tripping!",
                'form': form}
 
     return render(request, 'index.html', context)

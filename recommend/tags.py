@@ -27,10 +27,11 @@ place_tags = {
     TagKey('louisville', 'kentucky', True): ['alcohol', 'southern us'],
     TagKey('washington', 'district of columbia', True): ['capital', 'major'],
     TagKey('philadelphia', 'pennsylvania', True): ['historic'],
+    TagKey('los angeles', 'california', True): ['smog', 'art', 'crowded', 'major'],
     TagKey('las vegas', 'nevada', True): ['gambling', 'modern', 'nightlife', 'theater'],
     TagKey('houston', 'texas', True): ['southern us'],
-    # TagKey('maui', 'hawaii', True): ['beach', 'tropical', 'island', 'coastal',
-    #                                  'resort'],
+    TagKey('maui', 'hawaii', True): ['beach', 'tropical', 'island', 'coastal',
+                                     'resort'],
     TagKey('honolulu', 'hawaii', True): ['beach', 'tropical', 'island', 'coastal',
                                          'resort'],
     TagKey('austin', 'texas', True): ['southern us'],
@@ -42,7 +43,6 @@ place_tags = {
                                            'dense', 'food', 'coastal'],
     TagKey('catskill', 'new york', True): ['hipster', 'nature'],
     TagKey('salt lake city', 'utah', True): ['western us', 'nature'],
-    # TagKey('wasatch mountains', 'utah', True): ['moutnains', 'ski', 'resort'],
     TagKey('paris', 'france', False): ['capital', 'major', 'art', 'culture', 'food'],
     TagKey('chaniá', 'greece', False): ['beach', 'coastal', 'crete'],
     TagKey('réthymno', 'greece', False): ['beach', 'coastal', 'crete'],
@@ -61,7 +61,7 @@ place_tags = {
     TagKey('puerto plata', 'dominican republic', False): ['beach', 'coastal, resort',
                                                           'tropical'],
     TagKey('marrakech', 'morocco', False): ['culture'],
-    # TagKey('montreal', 'canada', False): ['capital'],
+    TagKey('montreal', 'canada', False): ['capital'],
     TagKey('ottawa', 'canada', False): ['capital', 'cold'],
     TagKey('fès', 'morocco', False): [],
     TagKey('siem reap', 'cambodia', False): ['historic', 'ancient', 'genocide'],
@@ -70,11 +70,9 @@ place_tags = {
     TagKey('prague', 'czech republic', False): ['capital'],
     TagKey('cape town', 'south africa', False): ['beach'],
     TagKey('johannesburg', 'south africa', False): ['wildlife', 'resort'],
-    # Cant' find zermatt
-    # TagKey('zermatt', 'switzerland', False): [],
+    TagKey('zermatt', 'switzerland', False): ['scenic', 'ski', 'mountains', 'alpine'],
     TagKey('barcelona', 'spain', False): ['mediterranean', 'culture', 'food'],
-    # Can't find goreme in db
-    # TagKey('goreme', 'turkey', False): ['historic', 'ancient'],
+    TagKey('göreme', 'turkey', False): ['historic', 'ancient', 'culture', 'scenic'],
     TagKey('ubud', 'indonesia', False): [],
     TagKey('bali', 'indonesia', False): ['rainy', 'tropical', 'culture', 'island'],
     TagKey('jakarta', 'indonesia', False): ['coastal', 'commerce', 'modern'],
@@ -89,9 +87,9 @@ place_tags = {
     TagKey('bangkok', 'thailand', False): ['major', 'culture'],
     TagKey('kathmandu', 'nepal', False): ['scenic'],
     TagKey('budapest', 'hungary', False): ['capital', 'major', 'culture'],
-    # TagKey('queenstown', 'new zealand', False): ['scenic', 'mountains'],
+    TagKey('queenstown', 'new zealand', False): ['scenic', 'mountains'],
 
-    TagKey('beijing', 'china', False): ['capital', 'major', 'industrial'],
+    TagKey('beijing', 'china', False): ['capital', 'major', 'industrial', 'smog'],
     TagKey('hong kong', 'china', False): ['major', 'commerce'],
     TagKey('chengdu', 'china', False): ['wildlife', 'commerce', 'culture'],
     TagKey('shanghai', 'china', False): ['major', 'commerce', 'coastal'],
@@ -160,7 +158,6 @@ country_tags = {
 def find_db_entry(place: TagKey) -> Place:
     """Accept place name strings, as passed from a web form; find their
     corresponding database entries."""
-
     if place.usa:
         result = Place.objects.filter(city=place.city).filter(country__name='united states')
         for place2 in result:

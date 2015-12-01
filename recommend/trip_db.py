@@ -168,8 +168,13 @@ alternate_names = {
 # Cities from some countries appear to be absent from the database. For example:
 # China and vietname
 
+canada = Country.objects.get(alpha3='can')
 china = Country.objects.get(alpha3='chn')
 vietnam = Country.objects.get(alpha3='vnm')
+usa = Country.objects.get(alpha3='usa')
+switzerland = Country.objects.get(alpha3='che')
+turkey = Country.objects.get(alpha3='tur')
+new_zealand = Country.objects.get(alpha3='nzl')
 
 manual_cities = [
     # Don't know the division_codes, so use 0 for all.
@@ -185,6 +190,13 @@ manual_cities = [
     Place(city='hanoi', country=vietnam, lat=21.028472, lon=105.854167, division_code=0),
     Place(city='can tho', country=vietnam, lat=10.033333, lon=105.783333, division_code=0),
     Place(city='da nang', country=vietnam, lat=16.066667, lon=108.233333, division_code=0),
+
+    # Island rather than city
+    Place(city='maui', country=usa, lat=20.8, lon=-156.333333, division_code=15),
+    Place(city='zermatt', country=switzerland, lat=46.016667, lon=7.75, division_code=0),
+    Place(city='göreme', country=turkey, lat=38.666667, lon=34.833333, division_code=0),
+    Place(city='queenstown', country=new_zealand, lat=-45.031111, lon=168.6625, division_code=0),
+    Place(city='montreal', country=canada, lat=45.5, lon=-73.566667, division_code=0),
     ]
 
 

@@ -13,3 +13,4 @@ workspace.xml
 # Project-specific
 recommend/private.py
 worldcities.csv
+*.swp # Openoffice is making a .swp file when opening worldcities.csv

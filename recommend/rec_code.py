@@ -2,14 +2,15 @@ from collections import defaultdict, OrderedDict
 from difflib import SequenceMatcher
 import json
 from itertools import chain, islice
+import re
 from typing import List, Iterable, Tuple, Generator, Iterator, Dict
+
 import numpy as np
 # from scipy.stats.stats import pearsonr
-
+from django.db import IntegrityError
 from django.db.models import Q
 
-from .models import Place, Country, Submission, fips_5_2_codes
-
+from .models import Place, Country, Submission, fips_5_2_codes, NotFound
 
 # todo latitude-based ranking?
 
@@ -22,6 +23,9 @@ default_places = {
     'auckland': 'new zealand',
     'arusha': 'tanzania',
     'athens': 'greece',
+    'bucharest': 'romania',
+    'budapest': 'hungary',
+    'brasilia': 'brazil',
     'christchurch': 'new zealand',
     'dar es salaam': 'tanzania',
     'edmonton': 'canada',
@@ -36,13 +40,11 @@ default_places = {
     'tokyo': 'japan',
     'delhi': 'india',
     'hong kong': 'china',
-    'mexico city': 'mexico',
-    # 'beijing': 'china',  # todo issue not finding chinese cities
+    'mexico': 'mexico',
     'cairo': 'egypt',
     'calcutta': 'india',
     'istanbul': 'turkey',
     'lagos': 'nigeria',
-    # 'shanghai': 'china',# todo issue not finding chinese cities
     'karachi': 'pakistan',
     'mumbai': 'india',
     'moscow': 'russia',
@@ -82,11 +84,13 @@ default_places = {
     'warsaw': 'poland',
     'vienna': 'austria',
     'valencia': 'spain',
+    'rio de janeiro': 'brazil',
+    'salvador': 'brazil',
     'shanghai': 'china',
     'shenzhen': 'china',
     'sydney': 'australia',
     'perth': 'australia',
-    'budapest': 'hungary',
+    'são paulo': 'brazil',
     'stockholm': 'sweden',
     'wellington': 'new zealand',
     'winnipeg': 'canada',
@@ -125,11 +129,13 @@ default_places = {
     'nashville': ['tennessee'],
     'new orleans': ['louisiana'],
     'kansas city': ['kansas'],
+    'los angelas': ['california'],
     'las vegas': ['nevada'],
     'oklahoma city': ['oklahoma'],
     'orlando': ['florida'],
     'palm springs': ['california'],
     'phoneix': ['arizona'],
+    'panama city': ['floridah'],
     'park city': ['utah'],
     'portland': ['oregon'],
     'richmond': ['virginia'],
@@ -137,6 +143,7 @@ default_places = {
     'san juan': ['puerto rico'],
     'san antonio': ['texas'],
     'saint louis': ['missouri'],
+    'santa barbara': ['california'],
     'santa monica': ['california'],
     'salt lake city': ['utah'],
     'san diego': ['california'],
@@ -358,10 +365,12 @@ def find_db_entry(place_name: str) -> Place:
                 if closeness > closeness_to_default_thresh:
                     return process_default_place(name, {name: country})
 
-    min_match_ratio = .7
+    min_match_ratio = .8
     words = place_name.split()
     ratios = []
     # Requiring the first three chars to match is rigid, but improves speed.
+    # todo  If the database city name includes an accent etc on one of the characters,
+    # todo but the entry doesn't, or vice versa, we won't find it! Make a workaround?
     potential_matches = Place.objects.filter(city__istartswith=place_name[:3])
 
     # todo this doesn't work for two-word cities!
@@ -445,7 +454,6 @@ def find_db_entries(place_names: Iterable[str]) -> Tuple[List[Place], List[str]]
     """Accept place name strings, as passed from a web form; find their
     corresponding database entries."""
 
-
     # todo if matches are identical or similar (florence italy vs usa), use
     # todo number of submissions to pick the most popular.
     entries, not_found = [], []
@@ -464,12 +472,23 @@ def process_input(place_str: str):
     """Find recommendations based on input places. This function handles the
     overall processing, includes tweaks for web page display."""
     num_to_display = 10
-    places = (place.strip() for place in place_str.split(','))
+    places = (place.strip() for place in re.split(',|;', place_str))
 
     entries, not_found = find_db_entries(places)
     entries = list(entries)
 
     submit_new(entries)
+
+    for name in not_found:
+        # If the entry doesn't exist, add it. If not, increase its count by one.
+        try:
+            nf = NotFound(name=name)
+            nf.save()
+        except IntegrityError:
+            nf = NotFound.objects.get(name=name)
+            nf.count += 1
+        nf.save()
+
 
     review_data = find_reviews()
 
@@ -486,7 +505,6 @@ def process_input(place_str: str):
     # both tag and user data.
     composite_tag = find_similar_multiple(scores_tag)
     composite_user = find_similar_multiple(scores_user)
-
 
     combined_composites = defaultdict(float)
     for place, score in composite_tag.items():

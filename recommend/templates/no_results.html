@@ -14,10 +14,12 @@
                 <p>We're working on updating our information; check back later!</p>
             {% endif     %}
             <ul>
-                <h2>Based on your choices of</h2>
-                {% for entry in  entries %}
-                    <li>{{ entry }}</li>
-                {% endfor %}
+                {% if entries %}
+                    <h2>Based on your choices of</h2>
+                    {% for entry in  entries %}
+                        <li>{{ entry }}</li>
+                    {% endfor %}
+                {% endif %}
             </ul>
             </h2>
             <h3>Unfortunately, we don't have recommendations for this set of

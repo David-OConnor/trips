@@ -28,7 +28,8 @@ ON_HEROKU = True if 'DATABASE_URL' in os.environ else False
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False if ON_HEROKU else True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'travelspots.herokuapp.com']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'travelspots.herokuapp.com',
+                 'imtripping.com']
 
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
@@ -84,7 +85,17 @@ WSGI_APPLICATION = 'trips.wsgi.application'
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
 
 LOCAL_DB = 'postgres://david:test@localhost:5432/trips'
+# Use this line if connecting to a local database. Use the if ON_HEROKU
+# statement below if connecting to heroku's database from a local machine.
 DATABASES = {'default': dj_database_url.config(default=LOCAL_DB)}
+
+# For connecting to Heroku's database from a local machine.
+# This if/else prevents loading the .gitignored private file if on Heroku.
+# if ON_HEROKU:
+#     DATABASES = {'default': dj_database_url.config()}
+# else:
+#     from recommend.private import heroku_db_url
+#     DATABASES = {'default': dj_database_url.config(default=heroku_db_url)}
 
 
 # Internationalization
