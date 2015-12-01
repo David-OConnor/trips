@@ -94,8 +94,12 @@ DATABASES = {'default': dj_database_url.config(default=LOCAL_DB)}
 if ON_HEROKU:
     DATABASES = {'default': dj_database_url.config()}
 else:
-    from recommend.private import heroku_db_url
-    DATABASES = {'default': dj_database_url.config(default=heroku_db_url)}
+    # Not sure why I need this try; comes up when using heroku run commands.
+    try:
+        from recommend.private import heroku_db_url
+        DATABASES = {'default': dj_database_url.config(default=heroku_db_url)}
+    except ImportError:
+        DATABASES = {'default': dj_database_url.config()}
 
 
 # Internationalization
