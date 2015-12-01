@@ -12,5 +12,6 @@ workspace.xml
 
 # Project-specific
 recommend/private.py
-worldcities.csv
+# May need worldcities.csv in repo afterall for heroku run.
+#worldcities.csv
 *.swp # Openoffice is making a .swp file when opening worldcities.csv

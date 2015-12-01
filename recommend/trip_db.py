@@ -12,6 +12,8 @@ from .models import Country, Region, Subregion, Place
 
 def get_all_countries() -> List[dict]:
     """Find countries from an API."""
+    # Import from private here to prevent error loading this file when using
+    # heroku run.
     from .private import mashape_key
     url = 'https://restcountries-v1.p.mashape.com/all'
 
@@ -80,6 +82,8 @@ def populate_places() -> None:
 
 # get_place is currently unused.
 def get_place(place_name: str):
+    # Import from private here to prevent error loading this file when using
+    # heroku run.
     from .private import goog_places_key
     url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json'
 
