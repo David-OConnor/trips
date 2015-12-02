@@ -16,15 +16,15 @@ class TripForm(forms.Form):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
         # self.helper.add_input(Submit('submit', 'Submit', css_class='btn-primary'))
+
         self.helper.layout = Layout(
 
             # FieldWithButtons('cities', Submit('search', '<i class="fa fa-search"></i>'),
             #                  placeholder='LOL'),
 
-            FieldWithButtons('cities', Submit('search', 'Go!'),
+            FieldWithButtons('cities', StrictButton('<i class="fa fa-search"></i>',
+                                     type='submit', name='Submit', value='submit'),
                              placeholder='LOL'),
-
-            # AppendedText('cities', 'moo', placeholder='balls')
 
             # AppendedText('cities', '<i class="fa fa-search"></i>',
             #              placeholder='Enter cities you\'ve enjoyed. eg '

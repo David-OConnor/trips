@@ -84,24 +84,18 @@ WSGI_APPLICATION = 'trips.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
 
-LOCAL_DB = 'postgres://david:test@localhost:5432/trips'
-# Use this line if connecting to a local database. Use the if ON_HEROKU
+
+# Use these lines if connecting to a local database. Use the if ON_HEROKU
 # statement below if connecting to heroku's database from a local machine.
+LOCAL_DB = 'postgres://david:test@localhost:5432/trips'
 DATABASES = {'default': dj_database_url.config(default=LOCAL_DB)}
 
-# # For connecting to Heroku's database from a local machine.
-# # This if/else prevents loading the .gitignored private file if on Heroku.
-if ON_HEROKU:
-    print("ON")
-    DATABASES = {'default': dj_database_url.config()}
-else:
-    print("OFF")
-    # Not sure why I need this try; comes up when using heroku run commands.
-    # try: todo remove this try/except bit if it's still here.
-    from recommend.private import heroku_db_url
-    DATABASES = {'default': dj_database_url.config(default=heroku_db_url)}
-    # except ImportError:
-    #     DATABASES = {'default': dj_database_url.config()}
+# This if/else prevents loading the .gitignored private file if on Heroku.
+# if ON_HEROKU:
+#     DATABASES = {'default': dj_database_url.config()}
+# else:
+#     from recommend.private import HEROKU_DB_URL
+#     DATABASES = {'default': dj_database_url.config(default=HEROKU_DB_URL)}
 
 
 # Internationalization
@@ -121,4 +115,5 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
 
+STATIC_ROOT = 'staticfiles'
 STATIC_URL = '/static/'
