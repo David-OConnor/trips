@@ -91,15 +91,17 @@ DATABASES = {'default': dj_database_url.config(default=LOCAL_DB)}
 
 # # For connecting to Heroku's database from a local machine.
 # # This if/else prevents loading the .gitignored private file if on Heroku.
-# if ON_HEROKU:
-#     DATABASES = {'default': dj_database_url.config()}
-# else:
-#     # Not sure why I need this try; comes up when using heroku run commands.
-#     # try:
-#     from recommend.private import heroku_db_url
-#     DATABASES = {'default': dj_database_url.config(default=heroku_db_url)}
-#     # except ImportError:
-#     #     DATABASES = {'default': dj_database_url.config()}
+if ON_HEROKU:
+    print("ON")
+    DATABASES = {'default': dj_database_url.config()}
+else:
+    print("OFF")
+    # Not sure why I need this try; comes up when using heroku run commands.
+    # try: todo remove this try/except bit if it's still here.
+    from recommend.private import heroku_db_url
+    DATABASES = {'default': dj_database_url.config(default=heroku_db_url)}
+    # except ImportError:
+    #     DATABASES = {'default': dj_database_url.config()}
 
 
 # Internationalization

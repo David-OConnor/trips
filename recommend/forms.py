@@ -17,7 +17,16 @@ class TripForm(forms.Form):
         self.helper.form_class = 'form-horizontal'
         # self.helper.add_input(Submit('submit', 'Submit', css_class='btn-primary'))
         self.helper.layout = Layout(
-            AppendedText('cities', '<i class="fa fa-search"></i>',
-                         placeholder='Enter cities you\'ve enjoyed. eg '
-                                     '\'paris, richmond virginia, oslo norway\''),
+
+            # FieldWithButtons('cities', Submit('search', '<i class="fa fa-search"></i>'),
+            #                  placeholder='LOL'),
+
+            FieldWithButtons('cities', Submit('search', 'Go!'),
+                             placeholder='LOL'),
+
+            # AppendedText('cities', 'moo', placeholder='balls')
+
+            # AppendedText('cities', '<i class="fa fa-search"></i>',
+            #              placeholder='Enter cities you\'ve enjoyed. eg '
+            #                          '\'paris, richmond virginia, oslo norway\''),
         )

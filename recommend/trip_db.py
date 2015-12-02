@@ -170,7 +170,6 @@ alternate_names = {
 }
 
 
-
 def populate_manual_places() -> None:
     # Cities from some countries appear to be absent from the database. For example:
     # China and vietname
